@@ -1,0 +1,57 @@
+{
+  "cloud189": {
+    "sha256": "8068de4a65158d49c14f757a8d42ffe81f19a4019efb05d1eebd531f809e22b9",
+    "bytes": 27377,
+    "provenance": "synthetic vectors evaluated by pinned current-deployment original methods; no network or credentials"
+  },
+  "mcloud": {
+    "sha256": "16a2bf8d068839b8981e89234909e4234433b18068de103cb214958b7a5dd314",
+    "bytes": 545112,
+    "provenance": "synthetic vectors evaluated by pinned current-deployment original methods; no network or credentials"
+  },
+  "cloud189-http": {
+    "sha256": "38f10e72466904849d7a3f11b540e7f5ce95be57264cefdaf5d990349bee82ef",
+    "bytes": 48761,
+    "provenance": "synthetic vectors evaluated by pinned current-deployment original methods; no network or credentials"
+  },
+  "mcloud-http": {
+    "sha256": "4752cc0b4e38850f7d053ac998124776559a5729f48143768228c8b569af89d9",
+    "bytes": 244845,
+    "provenance": "synthetic vectors evaluated by pinned current-deployment original methods; no network or credentials"
+  },
+  "tree": {
+    "sha256": "90cc0a11342ee511b36e2c61650cc6fd486bef8ffbc662afa65025cfade9436d",
+    "bytes": 941991,
+    "provenance": "synthetic vectors evaluated by pinned current-deployment original methods; no network or credentials"
+  },
+  "mcloud-service": {
+    "sha256": "12e3c749f69bd5a9cf0c23a3b4cb9429c1c651425e914c9c6fa2bd261f6e6f7f",
+    "bytes": 146760,
+    "provenance": "synthetic vectors evaluated by pinned current-deployment original methods; no network or credentials"
+  },
+  "cloud189-service": {
+    "sha256": "dbc03cc2a448cd88b87c8aeaadb3812126f8e3fd319858508b39ef0cb901aeac",
+    "bytes": 69378,
+    "provenance": "synthetic vectors evaluated by pinned current-deployment original methods; no network or credentials"
+  },
+  "mcloud-auth": {
+    "sha256": "71460b19234258b912cee7a03c43259d884e95e59a98afd86d053b37bdf4d9df",
+    "bytes": 127521,
+    "provenance": "synthetic vectors evaluated by pinned current-deployment original methods; no network or credentials"
+  },
+  "cloud189-auth": {
+    "sha256": "0806574e74647c63c67ba883dbf4f07dd67d2af7692166d507ed7b3914f09fb7",
+    "bytes": 59805,
+    "provenance": "synthetic vectors evaluated by pinned current-deployment original methods; no network or credentials"
+  },
+  "storage": {
+    "sha256": "65773a8092fc6bbe8362700048e1b396cc13a36795808f4ab194cb7144e07dc3",
+    "bytes": 5402,
+    "provenance": "synthetic vectors evaluated by pinned current-deployment original methods; no network or credentials"
+  },
+  "params": {
+    "sha256": "cf627300308022b9a5d7620d2f6fc254bf2adae8feb8c9a2f9587993d7456115",
+    "bytes": 18673,
+    "provenance": "synthetic vectors evaluated by pinned current-deployment original methods; no network or credentials"
+  }
+}

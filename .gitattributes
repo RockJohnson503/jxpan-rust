@@ -1,0 +1,5 @@
+# These pages are verbatim deployment imports: preserve their hashes and original
+# whitespace rather than silently reformatting or normalizing line endings.
+web/index.html -text -whitespace
+web/admin.html -text -whitespace
+web/admin-login.html -text -whitespace

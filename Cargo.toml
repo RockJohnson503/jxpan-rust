@@ -1,0 +1,32 @@
+[package]
+name = "jxpan-rust"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.93"
+publish = false
+
+[dependencies]
+axum = { version = "0.8", default-features = false, features = ["http1", "tokio", "json"] }
+tokio = { version = "1", default-features = false, features = ["macros", "net", "rt", "signal", "sync"] }
+rusqlite = { version = "0.37", features = ["bundled"] }
+base64 = "0.22"
+hmac = "0.12"
+md-5 = "0.10"
+regex = "1"
+serde_json = { version = "1", features = ["preserve_order"] }
+sha1 = "0.10"
+sha2 = "0.10"
+num-bigint = { version = "0.4", default-features = false, features = ["std"] }
+url = "2"
+futures-util = { version = "0.3", default-features = false, features = ["alloc", "async-await", "std"] }
+aes = "0.8"
+cbc = { version = "0.1", features = ["alloc", "block-padding"] }
+getrandom = "0.2"
+httpdate = "1"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+uuid = { version = "1", default-features = false, features = ["v4"] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "debuginfo"

@@ -1,0 +1,24 @@
+{
+  "source_sha256": "47e2a84566ffa338a420113818a4bb629d3a43f4290dd65547c52b4cfe23f118",
+  "pages": {
+    "index": {
+      "path": "/",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 275007,
+      "sha256": "867d387b5fb80da772d8e3627d5de76cfad4f387e92ce1cb3bea2039e3d6d2a6"
+    },
+    "admin-login": {
+      "path": "/admin",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 3699,
+      "sha256": "7218b85e4e40e50f23de3de47376f319f32fadfe54845412e58c1cd44735a646"
+    },
+    "admin": {
+      "bytes": 126752,
+      "sha256": "82898b569bddaa909dcc935359bca3fdc1e2e9cedb8d2f60049353a1c64c08f5",
+      "provenance": "isolated deployed admin(true) renderer; no credentials or session data"
+    }
+  }
+}

@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>后台管理面板 - 网盘解析工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/forge/1.3.1/forge.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#3b82f6",
+                        secondary: "#64748b",
+                        success: "#10b981",
+                        warning: "#f59e0b",
+                        danger: "#ef4444",
+                        dark: "#1e293b",
+                        light: "#f8fafc"
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .sidebar-item { transition: all 0.2s ease; }
+        .sidebar-item:hover { background: rgba(59,130,246,0.1); }
+        .sidebar-item.active { background: rgba(59,130,246,0.15); color: #3b82f6; border-right: 3px solid #3b82f6; }
+        .page-section { display: none; }
+        .page-section.active { display: block; }
+        .login-card { transition: all 0.2s ease; }
+        .login-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex">
+    <aside class="w-64 bg-white shadow-lg flex flex-col fixed h-full z-10">
+        <div class="p-6 border-b border-gray-200">
+            <h1 class="text-xl font-bold text-dark flex items-center gap-2">
+                <i class="fa fa-cogs text-primary"></i> 管理面板
+            </h1>
+            <p class="text-xs text-secondary mt-1">网盘解析工具</p>
+        </div>
+        <nav class="flex-1 py-4">
+            <div class="sidebar-item active px-6 py-3 flex items-center gap-3 cursor-pointer" onclick="switchPage('dashboard')" id="nav-dashboard">
+                <i class="fa fa-dashboard w-5 text-center"></i>
+                <span class="font-medium">控制面板</span>
+            </div>
+            <div class="sidebar-item px-6 py-3 flex items-center gap-3 cursor-pointer" onclick="switchPage('qrlogin')" id="nav-qrlogin">
+                <i class="fa fa-qrcode w-5 text-center"></i>
+                <span class="font-medium">扫码登录</span>
+            </div>
+            <div class="sidebar-item px-6 py-3 flex items-center gap-3 cursor-pointer" onclick="switchPage('records')" id="nav-records">
+                <i class="fa fa-list w-5 text-center"></i>
+                <span class="font-medium">解析记录</span>
+            </div>
+        </nav>
+        <div class="p-4 border-t border-gray-200">
+            <a href="/" class="flex items-center gap-2 text-secondary hover:text-primary text-sm mb-3 px-2">
+                <i class="fa fa-home"></i> 返回首页
+            </a>
+            <button onclick="logout()" class="flex items-center gap-2 text-danger hover:text-danger/80 text-sm px-2">
+                <i class="fa fa-sign-out"></i> 退出登录
+            </button>
+        </div>
+    </aside>
+    <main class="flex-1 ml-64 p-8">
+        <div class="page-section active" id="page-dashboard">
+            <h2 class="text-2xl font-bold text-dark mb-6 flex items-center gap-2"><i class="fa fa-dashboard text-primary"></i> 控制面板</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow"><div class="flex items-center justify-between"><div><p class="text-secondary text-sm mb-1">解析总数</p><p class="text-3xl font-bold text-dark" id="totalRequests">0</p></div><div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center"><i class="fa fa-bar-chart text-primary text-xl"></i></div></div></div>
+                <div class="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow"><div class="flex items-center justify-between"><div><p class="text-secondary text-sm mb-1">成功次数</p><p class="text-3xl font-bold text-success" id="successRequests">0</p></div><div class="w-12 h-12 bg-success/10 rounded-full flex items-center justify-center"><i class="fa fa-check-circle text-success text-xl"></i></div></div></div>
+                <div class="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow"><div class="flex items-center justify-between"><div><p class="text-secondary text-sm mb-1">失败次数</p><p class="text-3xl font-bold text-danger" id="failedRequests">0</p></div><div class="w-12 h-12 bg-danger/10 rounded-full flex items-center justify-center"><i class="fa fa-times-circle text-danger text-xl"></i></div></div></div>
+                <div class="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow"><div class="flex items-center justify-between"><div><p class="text-secondary text-sm mb-1">缓存命中</p><p class="text-3xl font-bold text-primary" id="cachedRequests">0</p></div><div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center"><i class="fa fa-database text-primary text-xl"></i></div></div></div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div class="bg-white rounded-xl p-6 shadow-sm"><h3 class="text-lg font-semibold text-dark mb-4 flex items-center gap-2"><i class="fa fa-pie-chart text-primary"></i> 解析成功率</h3><div class="h-64"><canvas id="successRateChart"></canvas></div></div>
+                <div class="bg-white rounded-xl p-6 shadow-sm"><h3 class="text-lg font-semibold text-dark mb-4 flex items-center gap-2"><i class="fa fa-line-chart text-primary"></i> 解析统计概览</h3><div class="h-64"><canvas id="statsChart"></canvas></div></div>
+            </div>
+            <div class="bg-white rounded-xl p-6 shadow-sm mb-6">
+                <div class="flex items-center justify-between mb-6"><h3 class="text-lg font-semibold text-dark flex items-center gap-2"><i class="fa fa-key text-primary"></i> 登录配置概况</h3><button onclick="loadAllLoginStatus()" class="bg-primary/10 text-primary px-4 py-2 rounded-lg hover:bg-primary/20 transition-all flex items-center gap-2"><i class="fa fa-refresh"></i> 刷新状态</button></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="loginStatusCards">
+                    <div class="login-card bg-gray-50 rounded-lg p-4 border border-gray-200"><div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><i class="fa fa-cloud text-primary text-lg"></i><span class="font-semibold text-dark">光鸭云盘</span></div><span id="gy-status-badge" class="px-2 py-1 rounded-full text-xs bg-gray-200 text-gray-500">检测中</span></div><div class="text-sm text-secondary mb-2" id="gy-status-source">--</div><button onclick="showLoginDetail('guangya')" class="text-xs text-primary hover:text-primary/80 flex items-center gap-1"><i class="fa fa-eye"></i> 查看详情</button></div>
+                    <div class="login-card bg-gray-50 rounded-lg p-4 border border-gray-200"><div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><i class="fa fa-cloud text-yellow-500 text-lg"></i><span class="font-semibold text-dark">阿里云盘</span></div><span id="aliyun-status-badge" class="px-2 py-1 rounded-full text-xs bg-gray-200 text-gray-500">未配置</span></div><div class="text-sm text-secondary mb-2" id="aliyun-status-source">--</div><button onclick="showLoginDetail('aliyun')" class="text-xs text-primary hover:text-primary/80 flex items-center gap-1"><i class="fa fa-eye"></i> 查看详情</button></div>
+                    <div class="login-card bg-gray-50 rounded-lg p-4 border border-gray-200"><div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><i class="fa fa-cloud text-orange-500 text-lg"></i><span class="font-semibold text-dark">UC网盘</span></div><span id="uc-status-badge" class="px-2 py-1 rounded-full text-xs bg-gray-200 text-gray-500">未配置</span></div><div class="text-sm text-secondary mb-2" id="uc-status-source">--</div><button onclick="showLoginDetail('uc')" class="text-xs text-primary hover:text-primary/80 flex items-center gap-1"><i class="fa fa-eye"></i> 查看详情</button></div>
+                    <div class="login-card bg-gray-50 rounded-lg p-4 border border-gray-200"><div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><i class="fa fa-cloud text-purple-500 text-lg"></i><span class="font-semibold text-dark">夸克网盘</span></div><span id="quark-status-badge" class="px-2 py-1 rounded-full text-xs bg-gray-200 text-gray-500">未配置</span></div><div class="text-sm text-secondary mb-2" id="quark-status-source">--</div><button onclick="showLoginDetail('quark')" class="text-xs text-primary hover:text-primary/80 flex items-center gap-1"><i class="fa fa-eye"></i> 查看详情</button></div>
+                    <div class="login-card bg-gray-50 rounded-lg p-4 border border-gray-200"><div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><i class="fa fa-cloud text-blue-500 text-lg"></i><span class="font-semibold text-dark">移动云盘</span></div><span id="mcloud-status-badge" class="px-2 py-1 rounded-full text-xs bg-gray-200 text-gray-500">未配置</span></div><div class="text-sm text-secondary mb-2" id="mcloud-status-source">--</div><button onclick="showLoginDetail('mcloud')" class="text-xs text-primary hover:text-primary/80 flex items-center gap-1"><i class="fa fa-eye"></i> 查看详情</button></div>
+                    <div class="login-card bg-gray-50 rounded-lg p-4 border border-gray-200"><div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><i class="fa fa-cloud text-red-500 text-lg"></i><span class="font-semibold text-dark">天翼云盘</span></div><span id="cloud189-status-badge" class="px-2 py-1 rounded-full text-xs bg-gray-200 text-gray-500">检测中</span></div><div class="text-sm text-secondary mb-2" id="cloud189-status-source">--</div><button onclick="showLoginDetail('cloud189')" class="text-xs text-primary hover:text-primary/80 flex items-center gap-1"><i class="fa fa-eye"></i> 查看详情</button></div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl p-6 shadow-sm">
+                <div class="flex items-center justify-between mb-4"><h3 class="text-lg font-semibold text-dark flex items-center gap-2"><i class="fa fa-info-circle text-primary"></i> 系统信息</h3><button onclick="loadStats()" class="bg-primary/10 text-primary px-4 py-2 rounded-lg hover:bg-primary/20 transition-all flex items-center gap-2"><i class="fa fa-refresh"></i> 刷新</button></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-gray-50 rounded-lg p-4"><p class="text-sm text-secondary mb-1">系统状态</p><p class="text-lg font-semibold text-success flex items-center gap-2"><i class="fa fa-circle text-xs"></i> 运行中</p></div>
+                    <div class="bg-gray-50 rounded-lg p-4"><p class="text-sm text-secondary mb-1">最后更新</p><p class="text-lg font-semibold text-dark" id="lastUpdate">--</p></div>
+                    <div class="bg-gray-50 rounded-lg p-4"><p class="text-sm text-secondary mb-1">成功率</p><p class="text-lg font-semibold text-success" id="successRate">--</p></div>
+                    <div class="bg-gray-50 rounded-lg p-4"><p class="text-sm text-secondary mb-1">缓存命中率</p><p class="text-lg font-semibold text-primary" id="cacheRate">--</p></div>
+                </div>
+            </div>
+        </div>
+        <div class="page-section" id="page-qrlogin">
+            <h2 class="text-2xl font-bold text-dark mb-6 flex items-center gap-2"><i class="fa fa-qrcode text-primary"></i> 扫码登录</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="bg-white rounded-xl p-6 shadow-sm">
+                    <div class="flex items-center gap-3 mb-4"><div class="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center"><i class="fa fa-cloud text-primary text-lg"></i></div><div><h3 class="font-semibold text-dark">光鸭云盘</h3><p class="text-xs text-secondary" id="gy-qr-status">未登录</p></div></div>
+                    <div id="gy-qr-container"><button onclick="startGuangyaQRLogin()" id="guangyaQRButton" class="w-full bg-primary text-white py-2.5 rounded-lg hover:bg-primary/90 transition-all flex items-center justify-center gap-2"><i class="fa fa-qrcode"></i> 扫码登录</button></div>
+                    <div id="guangyaQRCode" class="hidden mt-4"><div class="flex flex-col items-center"><div id="qrcodeImage" class="mb-3 p-3 bg-white rounded-lg shadow"></div><p class="text-xs text-secondary mb-1">请使用光鸭云盘APP或微信扫码</p><p class="text-xs text-gray-500 mb-2">验证码: <span id="userCodeDisplay" class="font-mono font-bold text-primary"></span></p><div class="flex items-center gap-2 mb-2"><div class="w-24 bg-gray-200 rounded-full h-1.5"><div id="qrCountdown" class="bg-primary h-1.5 rounded-full transition-all" style="width: 100%"></div></div><span id="qrCountdownText" class="text-xs text-secondary">600s</span></div><p id="guangyaQRStatus" class="text-xs text-secondary">等待扫码...</p><button onclick="cancelGuangyaQRLogin()" class="mt-3 text-xs text-gray-500 hover:text-gray-700">取消</button></div></div>
+                    <div id="guangyaLoginSuccess" class="hidden mt-4"><div class="bg-success/10 border border-success/30 rounded-lg p-3 text-center"><i class="fa fa-check-circle text-success text-2xl mb-1"></i><p class="text-sm font-semibold text-success">登录成功！</p><p class="text-xs text-secondary mt-1">已保存到默认配置</p></div></div>
+                    <div class="mt-4 border-t pt-4"><button onclick="toggleManualInput('gy')" class="text-xs text-primary hover:text-primary/80 flex items-center gap-1"><i class="fa fa-keyboard-o"></i> 手动输入</button><div id="gy-manual-input" class="hidden mt-3 space-y-2"><input type="text" id="guangyaAccessToken" class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="access_token"><input type="text" id="guangyaRefreshToken" class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="refresh_token (可选)"><button onclick="saveGuangyaManualLogin()" class="w-full bg-success text-white text-sm py-1.5 rounded-lg hover:bg-success/90">保存</button></div></div>
+                </div>
+                <div class="bg-white rounded-xl p-6 shadow-sm">
+                    <div class="flex items-center gap-3 mb-4"><div class="w-10 h-10 bg-yellow-500/10 rounded-full flex items-center justify-center"><i class="fa fa-cloud text-yellow-500 text-lg"></i></div><div><h3 class="font-semibold text-dark">阿里云盘</h3><p class="text-xs text-secondary" id="aliyun-qr-status">未登录</p></div></div>
+                    <div id="aliyun-qr-card-container"><button onclick="startAliyunQRLoginCard()" id="aliyunQRButtonCard" class="w-full bg-yellow-500 text-white py-2.5 rounded-lg hover:bg-yellow-500/90 transition-all flex items-center justify-center gap-2"><i class="fa fa-qrcode"></i> 扫码登录</button></div>
+                    <div id="aliyunQRCodeCard" class="hidden mt-4"><div class="flex flex-col items-center"><div id="aliyunQrcodeImageCard" class="mb-3 p-3 bg-white rounded-lg shadow"></div><p class="text-xs text-secondary mb-1">请使用阿里云盘APP扫码</p><div class="flex items-center gap-2 mb-2"><div class="w-24 bg-gray-200 rounded-full h-1.5"><div id="aliyunCountdownCard" class="bg-yellow-500 h-1.5 rounded-full transition-all" style="width: 100%"></div></div><span id="aliyunCountdownTextCard" class="text-xs text-secondary">600s</span></div><p id="aliyunQRStatusCard" class="text-xs text-secondary">等待扫码...</p><button onclick="cancelAliyunQRLoginCard()" class="mt-3 text-xs text-gray-500 hover:text-gray-700">取消</button></div></div>
+                    <div id="aliyunLoginSuccessCard" class="hidden mt-4"><div class="bg-success/10 border border-success/30 rounded-lg p-3 text-center"><i class="fa fa-check-circle text-success text-2xl mb-1"></i><p class="text-sm font-semibold text-success">登录成功！</p><p class="text-xs text-secondary mt-1">已保存到默认配置</p></div></div>
+                    <div class="mt-4 border-t pt-4"><button onclick="toggleAliyunManualInput()" class="text-xs text-yellow-500 hover:text-yellow-500/80 flex items-center gap-1"><i class="fa fa-keyboard-o"></i> 手动输入Authorization</button><div id="aliyun-manual-input-card" class="hidden mt-3 space-y-2"><textarea id="aliyunAuthCard" class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent" rows="3" placeholder="Authorization"></textarea><button onclick="saveAliyunManualLogin()" class="w-full bg-success text-white text-sm py-1.5 rounded-lg hover:bg-success/90">保存</button></div></div>
+                </div>
+                <div class="bg-white rounded-xl p-6 shadow-sm">
+                    <div class="flex items-center gap-3 mb-4"><div class="w-10 h-10 bg-orange-500/10 rounded-full flex items-center justify-center"><i class="fa fa-cloud text-orange-500 text-lg"></i></div><div><h3 class="font-semibold text-dark">UC网盘</h3><p class="text-xs text-secondary" id="uc-qr-status">未登录</p></div></div>
+                    <div id="uc-qr-container"><button onclick="startUCQRLogin()" id="ucQRButton" class="w-full bg-orange-500 text-white py-2.5 rounded-lg hover:bg-orange-500/90 transition-all flex items-center justify-center gap-2"><i class="fa fa-qrcode"></i> 扫码登录</button></div>
+                    <div id="ucQRCode" class="hidden mt-4"><div class="flex flex-col items-center"><div id="ucQrcodeImage" class="mb-3 p-3 bg-white rounded-lg shadow"></div><p class="text-xs text-secondary mb-1">请使用UC浏览器扫码</p><div class="flex items-center gap-2 mb-2"><div class="w-24 bg-gray-200 rounded-full h-1.5"><div id="ucCountdown" class="bg-orange-500 h-1.5 rounded-full transition-all" style="width: 100%"></div></div><span id="ucCountdownText" class="text-xs text-secondary">600s</span></div><p id="ucQRStatus" class="text-xs text-secondary">等待扫码...</p><button onclick="cancelUCQRLogin()" class="mt-3 text-xs text-gray-500 hover:text-gray-700">取消</button></div></div>
+                    <div id="ucLoginSuccess" class="hidden mt-4"><div class="bg-success/10 border border-success/30 rounded-lg p-3 text-center"><i class="fa fa-check-circle text-success text-2xl mb-1"></i><p class="text-sm font-semibold text-success">登录成功！</p></div></div>
+                    <div class="mt-4 border-t pt-4"><button onclick="toggleManualInput('uc')" class="text-xs text-orange-500 hover:text-orange-500/80 flex items-center gap-1"><i class="fa fa-keyboard-o"></i> 手动输入Cookie</button><div id="uc-manual-input" class="hidden mt-3 space-y-2"><textarea id="ucCookieInput" class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" rows="3" placeholder="cookie字符串"></textarea><button onclick="saveUCManualLogin()" class="w-full bg-success text-white text-sm py-1.5 rounded-lg hover:bg-success/90">保存</button></div></div>
+                </div>
+                <div class="bg-white rounded-xl p-6 shadow-sm">
+                    <div class="flex items-center gap-3 mb-4"><div class="w-10 h-10 bg-purple-500/10 rounded-full flex items-center justify-center"><i class="fa fa-cloud text-purple-500 text-lg"></i></div><div><h3 class="font-semibold text-dark">夸克网盘</h3><p class="text-xs text-secondary" id="quark-qr-status">未登录</p></div></div>
+                    <div id="quark-qr-container"><button onclick="startQuarkQRLogin()" id="quarkQRButton" class="w-full bg-purple-500 text-white py-2.5 rounded-lg hover:bg-purple-500/90 transition-all flex items-center justify-center gap-2"><i class="fa fa-qrcode"></i> 扫码登录</button></div>
+                    <div id="quarkQRCode" class="hidden mt-4"><div class="flex flex-col items-center"><div id="quarkQrcodeImage" class="mb-3 p-3 bg-white rounded-lg shadow"></div><p class="text-xs text-secondary mb-1">请使用夸克APP扫码</p><div class="flex items-center gap-2 mb-2"><div class="w-24 bg-gray-200 rounded-full h-1.5"><div id="quarkCountdown" class="bg-purple-500 h-1.5 rounded-full transition-all" style="width: 100%"></div></div><span id="quarkCountdownText" class="text-xs text-secondary">600s</span></div><p id="quarkQRStatus" class="text-xs text-secondary">等待扫码...</p><button onclick="cancelQuarkQRLogin()" class="mt-3 text-xs text-gray-500 hover:text-gray-700">取消</button></div></div>
+                    <div id="quarkLoginSuccess" class="hidden mt-4"><div class="bg-success/10 border border-success/30 rounded-lg p-3 text-center"><i class="fa fa-check-circle text-success text-2xl mb-1"></i><p class="text-sm font-semibold text-success">登录成功！</p></div></div>
+                    <div class="mt-4 border-t pt-4"><button onclick="toggleManualInput('quark')" class="text-xs text-purple-500 hover:text-purple-500/80 flex items-center gap-1"><i class="fa fa-keyboard-o"></i> 手动输入Cookie</button><div id="quark-manual-input" class="hidden mt-3 space-y-2"><textarea id="quarkCookieInput" class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" rows="3" placeholder="cookie字符串"></textarea><button onclick="saveQuarkManualLogin()" class="w-full bg-success text-white text-sm py-1.5 rounded-lg hover:bg-success/90">保存</button></div></div>
+                </div>
+                <div class="bg-white rounded-xl p-6 shadow-sm">
+                    <div class="flex items-center gap-3 mb-4"><div class="w-10 h-10 bg-cyan-500/10 rounded-full flex items-center justify-center"><i class="fa fa-plane text-cyan-500 text-lg"></i></div><div><h3 class="font-semibold text-dark">小飞机云盘</h3><p class="text-xs text-secondary" id="feiji-qr-status">未登录（大于300MB需登录）</p></div></div>
+                    <div id="feiji-qr-container"><button onclick="startFeijiQRLogin()" id="feijiQRButton" class="w-full bg-cyan-500 text-white py-2.5 rounded-lg hover:bg-cyan-500/90 transition-all flex items-center justify-center gap-2"><i class="fa fa-qrcode"></i> 登录配置</button></div>
+                    <div id="feijiAccountLogin" class="hidden mt-4 p-4 bg-gray-50 rounded-lg space-y-3 border border-cyan-200"><div class="text-sm font-semibold text-cyan-700 mb-2 flex items-center gap-2"><i class="fa fa-user-circle"></i> 账号密码登录（推荐）</div><div class="space-y-2"><input type="text" id="feijiUsernameInput" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent" placeholder="👤 用户名 / 邮箱 / 手机号"><input type="password" id="feijiPasswordInput" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent" placeholder="🔒 密码" onkeypress="if(event.key==='Enter') doFeijiAccountLogin()"></div><button onclick="doFeijiAccountLogin()" id="feijiAccountLoginBtn" class="w-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-2 rounded-lg hover:from-cyan-600 hover:to-blue-600 transition-all font-medium">🔐 登录并保存</button><div id="feijiAccountStatus" class="hidden text-xs p-2 rounded"></div></div>
+                    <div id="feijiManualInput" class="hidden mt-4 space-y-2 pt-4 border-t border-gray-200"><div class="text-xs text-gray-500 mb-1 flex items-center gap-1"><i class="fa fa-keyboard-o"></i> 备用方案：手动输入Cookie/Token</div><textarea id="feijiTokenInput" class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent" rows="3" placeholder="Access Token 或 Cookie (从浏览器复制)"></textarea><button onclick="saveFeijiManualLogin()" class="w-full bg-success text-white text-sm py-1.5 rounded-lg hover:bg-success/90">保存</button></div>
+                    <div id="feijiLoginSuccess" class="hidden mt-4"><div class="bg-success/10 border border-success/30 rounded-lg p-3 text-center"><i class="fa fa-check-circle text-success text-2xl mb-1"></i><p class="text-sm font-semibold text-success">登录成功！</p><p class="text-xs text-secondary mt-1">已保存，可解析大于300MB文件</p><button onclick="logoutFeiji()" class="mt-2 text-xs text-danger hover:underline">退出登录</button></div></div>
+                </div>
+                <div class="bg-white rounded-xl p-6 shadow-sm">
+                    <div class="flex items-center gap-3 mb-4"><div class="w-10 h-10 bg-red-500/10 rounded-full flex items-center justify-center"><i class="fa fa-cloud text-red-500 text-lg"></i></div><div><h3 class="font-semibold text-dark">天翼云盘</h3><p class="text-xs text-secondary">扫码登录或配置AccessToken</p></div></div>
+                    <div id="c189-login-status" class="mb-4 p-3 bg-gray-50 rounded-lg hidden"><div class="flex items-center justify-between"><span class="text-sm" id="c189StatusText">未登录</span><button onclick="checkC189Status()" class="text-xs text-primary hover:underline">刷新</button><button onclick="logoutC189()" class="text-xs text-danger hover:underline ml-2">退出</button></div></div>
+                    <div id="c189-qr-container"><button onclick="startC189QRLogin()" id="c189QRButton" class="w-full bg-red-500 text-white py-2.5 rounded-lg hover:bg-red-500/90 transition-all flex items-center justify-center gap-2"><i class="fa fa-qrcode"></i> 扫码登录</button></div>
+                    <div id="c189QRCode" class="hidden mt-4"><div class="flex flex-col items-center"><div id="c189QrcodeImage" class="mb-3 p-3 bg-white rounded-lg shadow"></div><p class="text-xs text-secondary mb-1">请使用天翼云盘APP扫码</p><div class="flex items-center gap-2 mb-2"><div class="w-24 bg-gray-200 rounded-full h-1.5"><div id="c189Countdown" class="bg-red-500 h-1.5 rounded-full transition-all" style="width: 100%"></div></div><span id="c189CountdownText" class="text-xs text-secondary">300s</span></div><p id="c189QRStatus" class="text-xs text-secondary">等待扫码...</p><button onclick="cancelC189QRLogin()" class="mt-3 text-xs text-gray-500 hover:text-gray-700">取消</button></div></div>
+                    <div id="c189LoginSuccess" class="hidden mt-4"><div class="bg-success/10 border border-success/30 rounded-lg p-3 text-center"><i class="fa fa-check-circle text-success text-2xl mb-1"></i><p class="text-sm font-semibold text-success">登录成功！</p><p class="text-xs text-secondary mt-1">有效期: 7天（如遇失效请重新扫码）</p></div></div>
+                    <div class="mt-4 border-t pt-4"><button onclick="toggleManualInput('c189')" class="text-xs text-red-500 hover:text-red-500/80 flex items-center gap-1"><i class="fa fa-keyboard-o"></i> 手动输入AccessToken</button><div id="c189-manual-input" class="hidden mt-3 space-y-2"><input type="text" id="c189TokenInput" class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" placeholder="Open API AccessToken"><button onclick="saveC189ManualLogin()" class="w-full bg-success text-white text-sm py-1.5 rounded-lg hover:bg-success/90">保存</button><p class="text-xs text-secondary mt-1">支持环境变量: P189_TOKEN / CLOUD189_TOKEN</p></div></div>
+                </div>
+                <div class="bg-white rounded-xl p-6 shadow-sm">
+                    <div class="flex items-center gap-3 mb-4"><div class="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center"><i class="fa fa-cloud text-blue-500 text-lg"></i></div><div><h3 class="font-semibold text-dark">移动云盘</h3><p class="text-xs text-secondary">暂未实现</p></div></div>
+                    <div class="flex flex-col items-center justify-center py-6 text-gray-400"><i class="fa fa-clock-o text-3xl mb-2"></i><p class="text-sm">扫码登录暂未实现</p><p class="text-xs mt-1">请使用手动输入Authorization方式</p></div>
+                    <div class="mt-4 border-t pt-4"><button onclick="toggleManualInput('mcloud')" class="text-xs text-blue-500 hover:text-blue-500/80 flex items-center gap-1"><i class="fa fa-keyboard-o"></i> 手动输入Authorization</button><div id="mcloud-manual-input" class="hidden mt-3 space-y-2"><input type="text" id="mcloudAuthInput" class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Authorization"><button onclick="saveMCloudManualLogin()" class="w-full bg-success text-white text-sm py-1.5 rounded-lg hover:bg-success/90">保存</button></div></div>
+                </div>
+                <div class="bg-white rounded-xl p-6 shadow-sm">
+                    <div class="flex items-center gap-3 mb-4"><div class="w-10 h-10 bg-orange-500/10 rounded-full flex items-center justify-center"><i class="fa fa-cloud text-orange-500 text-lg"></i></div><div><h3 class="font-semibold text-dark">蓝奏云优享版</h3><p class="text-xs text-secondary" id="ilanzou-login-status">未登录</p></div></div>
+                    <div id="ilanzou-login-container"><button onclick="showIlanzouLogin()" id="ilanzouLoginButton" class="w-full bg-orange-500 text-white py-2.5 rounded-lg hover:bg-orange-500/90 transition-all flex items-center justify-center gap-2"><i class="fa fa-user-circle"></i> 账号密码登录</button></div>
+                    <div id="ilanzouAccountLogin" class="hidden mt-4 p-4 bg-gray-50 rounded-lg space-y-3 border border-orange-200"><div class="text-sm font-semibold text-orange-700 mb-2 flex items-center gap-2"><i class="fa fa-user-circle"></i> 账号密码登录</div><div class="space-y-2"><input type="text" id="ilanzouUsernameInput" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" placeholder="👤 邮箱 / 手机号"><input type="password" id="ilanzouPasswordInput" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" placeholder="🔒 密码" onkeypress="if(event.key==='Enter') doIlanzouAccountLogin()"></div><button onclick="doIlanzouAccountLogin()" id="ilanzouAccountLoginBtn" class="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-2 rounded-lg hover:from-orange-600 hover:to-red-600 transition-all font-medium">🔐 登录并保存</button><div id="ilanzouAccountStatus" class="hidden text-xs p-2 rounded"></div></div>
+                    <div id="ilanzouLoginSuccess" class="hidden mt-4"><div class="bg-success/10 border border-success/30 rounded-lg p-3 text-center"><i class="fa fa-check-circle text-success text-2xl mb-1"></i><p class="text-sm font-semibold text-success">登录成功！</p><p class="text-xs text-secondary mt-1">已保存，可解析文件夹内容</p><button onclick="logoutIlanzou()" class="mt-2 text-xs text-danger hover:underline">退出登录</button></div></div>
+                </div>
+                <div class="bg-white rounded-xl p-6 shadow-sm">
+                    <div class="flex items-center gap-3 mb-4"><div class="w-10 h-10 bg-green-500/10 rounded-full flex items-center justify-center"><i class="fa fa-cloud text-green-500 text-lg"></i></div><div><h3 class="font-semibold text-dark">123云盘</h3><p class="text-xs text-secondary" id="pan123-qr-status">未登录</p></div></div>
+                    <div class="mt-4 border-t pt-4"><button onclick="toggleManualInput('pan123')" class="text-xs text-green-500 hover:text-green-500/80 flex items-center gap-1"><i class="fa fa-keyboard-o"></i> 手动输入Token</button><div id="pan123-manual-input" class="hidden mt-3 space-y-2"><textarea id="pan123TokenInput" class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" rows="3" placeholder="JWT Token"></textarea><button onclick="savePan123ManualLogin()" class="w-full bg-success text-white text-sm py-1.5 rounded-lg hover:bg-success/90">保存</button><p class="text-xs text-secondary mt-1">在浏览器访问 https://www.123pan.cn/ 使用网页版登录时使用F12找到/api/user/sign_i 的请求</p><p class="text-xs text-gray-400 mt-1">支持环境变量: PAN123_AUTH</p></div></div>
+                </div>
+            </div>
+        </div>
+        <div class="page-section" id="page-records">
+            <h2 class="text-2xl font-bold text-dark mb-6 flex items-center gap-2"><i class="fa fa-list text-primary"></i> 解析记录</h2>
+            <div class="bg-white rounded-xl p-6 shadow-sm">
+                <!-- 搜索和操作栏 -->
+                <div class="mb-6 space-y-3">
+                    <div class="flex items-center gap-3">
+                        <div class="flex-1 relative">
+                            <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input type="text" id="recordSearchInput" oninput="searchRecords(this.value)" class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm" placeholder="搜索分享链接、错误信息、成功信息...">
+                        </div>
+                        <button onclick="loadRecords()" class="bg-primary/10 text-primary px-4 py-2.5 rounded-lg hover:bg-primary/20 transition-all flex items-center gap-2 whitespace-nowrap"><i class="fa fa-refresh"></i> 刷新</button>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2"><button onclick="switchTab('success')" id="tabSuccess" class="px-4 py-2 rounded-lg font-medium transition-all bg-success text-white"><i class="fa fa-check-circle mr-1"></i> 成功记录 <span id="successCount" class="ml-1 opacity-75">(0)</span></button><button onclick="switchTab('failed')" id="tabFailed" class="px-4 py-2 rounded-lg font-medium transition-all bg-gray-200 text-gray-600 hover:bg-gray-300"><i class="fa fa-times-circle mr-1"></i> 失败记录 <span id="failedCount" class="ml-1">(0)</span></button><button onclick="clearAllRecords()" id="clearAllBtn" class="bg-danger/10 text-danger px-4 py-2 rounded-lg hover:bg-danger/20 transition-all flex items-center gap-2"><i class="fa fa-trash-o"></i> 清空全部</button><button onclick="loadRecords()" class="bg-primary/10 text-primary px-4 py-2 rounded-lg hover:bg-primary/20 transition-all flex items-center gap-2"><i class="fa fa-refresh"></i> 刷新</button></div>
+                    </div>
+                </div>
+                <div id="recordsList" class="space-y-4"><div class="text-center py-8 text-secondary"><i class="fa fa-spinner fa-spin text-2xl mb-2"></i><p>加载中...</p></div></div>
+            </div>
+        </div>
+        <div id="loginDetailModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+            <div class="bg-white rounded-xl p-6 max-w-lg w-full mx-4 shadow-2xl">
+                <div class="flex items-center justify-between mb-4"><h3 class="text-lg font-semibold text-dark" id="modalTitle">登录详情</h3><button onclick="closeLoginDetail()" class="text-secondary hover:text-dark"><i class="fa fa-times text-lg"></i></button></div>
+                <div id="modalContent" class="space-y-3"></div>
+                <div class="mt-6 flex justify-end"><button onclick="closeLoginDetail()" class="bg-gray-200 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-300 transition-all">关闭</button></div>
+            </div>
+        </div>
+    </main>
+    <script>
+        let successRateChart = null;
+        let statsChart = null;
+        let currentTab = "success";
+        let allRecords = { success: [], failed: [], total: 0 };
+        let currentPage = 1;
+        let pageSize = 50;
+        let guangyaQRInterval = null;
+        let guangyaQRCountdownInterval = null;
+        let currentDeviceId = null;
+        let currentExpiresIn = 600;
+        let loginStatusCache = {};
+        function switchPage(page) {
+            document.querySelectorAll(".page-section").forEach(el => el.classList.remove("active"));
+            document.querySelectorAll(".sidebar-item").forEach(el => el.classList.remove("active"));
+            document.getElementById("page-" + page).classList.add("active");
+            document.getElementById("nav-" + page).classList.add("active");
+            if (page === "dashboard") { startStatsPolling(); initCharts(); } else { stopStatsPolling(); }
+            if (page === "qrlogin") { loadAllLoginStatus(); }
+            if (page === "records") { loadRecords(); }
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+        function showLoginDetail(platform) {
+            const modal = document.getElementById("loginDetailModal");
+            const title = document.getElementById("modalTitle");
+            const content = document.getElementById("modalContent");
+            const names = { guangya: "光鸭云盘", aliyun: "阿里云盘", uc: "UC网盘", quark: "夸克网盘", mcloud: "移动云盘", cloud189: "天翼云盘" };
+            title.textContent = names[platform] + " - 登录详情";
+            const info = loginStatusCache[platform];
+            if (info && info.logged_in) {
+                let html = '';
+                html += '<div class="bg-gray-50 rounded-lg p-3 mb-3"><div class="text-xs text-secondary mb-1">登录状态</div><div class="text-sm font-semibold text-success"><i class="fa fa-check-circle mr-1"></i>已登录</div></div>';
+                html += '<div class="bg-gray-50 rounded-lg p-3 mb-3"><div class="text-xs text-secondary mb-1">配置来源</div><div class="text-sm font-medium">' + (info.source === "kv_default" ? "后台扫码配置" : info.source === "kv_scan" ? "扫码登录配置" : info.source === "env_var" ? "环境变量配置" : info.source === "default_config" ? "扫码登录配置" : info.source) + '</div></div>';
+                if (info.loginInfo) {
+                    html += '<div class="bg-gray-50 rounded-lg p-3 mb-3"><div class="text-xs text-secondary mb-2 font-medium">环境变量/存储配置</div>';
+                    if (platform === "guangya") {
+                        if (info.loginInfo.access_token) { html += '<div class="mb-2"><div class="text-xs text-secondary mb-1">access_token</div><div class="text-xs font-mono break-all bg-white p-2 rounded border max-h-24 overflow-auto">' + (info.loginInfo.access_token.length > 50 ? info.loginInfo.access_token.substring(0, 50) + "..." : info.loginInfo.access_token) + '</div></div>'; }
+                        if (info.loginInfo.refresh_token) { html += '<div class="mb-2"><div class="text-xs text-secondary mb-1">refresh_token</div><div class="text-xs font-mono break-all bg-white p-2 rounded border max-h-24 overflow-auto">' + (info.loginInfo.refresh_token.length > 50 ? info.loginInfo.refresh_token.substring(0, 50) + "..." : info.loginInfo.refresh_token) + '</div></div>'; }
+                        if (info.loginInfo.device_id) { html += '<div class="mb-2"><div class="text-xs text-secondary mb-1">device_id</div><div class="text-xs font-mono break-all bg-white p-2 rounded border">' + info.loginInfo.device_id + '</div></div>'; }
+                        if (info.loginInfo.token_expires_at) { const expDate = new Date(info.loginInfo.token_expires_at * 1000); html += '<div class="mb-2"><div class="text-xs text-secondary mb-1">过期时间</div><div class="text-xs">' + expDate.toLocaleString("zh-CN") + '</div></div>'; }
+                        if (info.loginInfo.user_name) { html += '<div class="mb-2"><div class="text-xs text-secondary mb-1">用户名</div><div class="text-xs">' + info.loginInfo.user_name + '</div></div>'; }
+                        if (info.loginInfo.user_id) { html += '<div class="mb-2"><div class="text-xs text-secondary mb-1">用户ID</div><div class="text-xs font-mono">' + info.loginInfo.user_id + '</div></div>'; }
+                    } else if (platform === "aliyun") {
+                        if (info.loginInfo.type) { html += '<div class="mb-2"><div class="text-xs text-secondary mb-1">Token类型</div><div class="text-xs font-medium">' + info.loginInfo.type + '</div></div>'; }
+                        if (info.loginInfo.authorization) { html += '<div class="mb-2"><div class="text-xs text-secondary mb-1">Authorization</div><div class="text-xs font-mono break-all bg-white p-2 rounded border max-h-24 overflow-auto">' + (info.loginInfo.authorization.length > 50 ? info.loginInfo.authorization.substring(0, 50) + "..." : info.loginInfo.authorization) + '</div></div>'; }
+                        if (info.loginInfo.refresh_token) { html += '<div class="mb-2"><div class="text-xs text-secondary mb-1">Refresh Token</div><div class="text-xs font-mono break-all bg-white p-2 rounded border max-h-20 overflow-auto">' + (info.loginInfo.refresh_token.length > 50 ? info.loginInfo.refresh_token.substring(0, 50) + "..." : info.loginInfo.refresh_token) + '</div></div>'; }
+                    } else if (platform === "quark" || platform === "uc") {
+                        if (info.loginInfo.cookie) { html += '<div class="mb-2"><div class="text-xs text-secondary mb-1">Cookie</div><div class="text-xs font-mono break-all bg-white p-2 rounded border max-h-32 overflow-auto">' + (info.loginInfo.cookie.length > 80 ? info.loginInfo.cookie.substring(0, 80) + "..." : info.loginInfo.cookie) + '</div></div>'; }
+                    } else if (platform === "mcloud") {
+                        if (info.loginInfo.authorization) { html += '<div class="mb-2"><div class="text-xs text-secondary mb-1">Authorization</div><div class="text-xs font-mono break-all bg-white p-2 rounded border max-h-24 overflow-auto">' + (info.loginInfo.authorization.length > 50 ? info.loginInfo.authorization.substring(0, 50) + "..." : info.loginInfo.authorization) + '</div></div>'; }
+                        if (info.loginInfo.cookie) { html += '<div class="mb-2"><div class="text-xs text-secondary mb-1">Cookie</div><div class="text-xs font-mono break-all bg-white p-2 rounded border max-h-24 overflow-auto">' + (info.loginInfo.cookie.length > 80 ? info.loginInfo.cookie.substring(0, 80) + "..." : info.loginInfo.cookie) + '</div></div>'; }
+                        if (info.loginInfo.phone) { html += '<div class="mb-2"><div class="text-xs text-secondary mb-1">绑定手机号</div><div class="text-xs">' + info.loginInfo.phone + '</div></div>'; }
+                    } else if (platform === "cloud189") {
+                        if (info.loginInfo.open_access_token) { html += '<div class="mb-2"><div class="text-xs text-secondary mb-1">Open Access Token</div><div class="text-xs font-mono break-all bg-white p-2 rounded border max-h-24 overflow-auto">' + (info.loginInfo.open_access_token.length > 50 ? info.loginInfo.open_access_token.substring(0, 50) + "..." : info.loginInfo.open_access_token) + '</div></div>'; }
+                        if (info.loginInfo.access_token) { html += '<div class="mb-2"><div class="text-xs text-secondary mb-1">Access Token</div><div class="text-xs font-mono break-all bg-white p-2 rounded border max-h-24 overflow-auto">' + (info.loginInfo.access_token.length > 50 ? info.loginInfo.access_token.substring(0, 50) + "..." : info.loginInfo.access_token) + '</div></div>'; }
+                        if (info.loginInfo.device_id) { html += '<div class="mb-2"><div class="text-xs text-secondary mb-1">设备ID</div><div class="text-xs font-mono break-all bg-white p-2 rounded border">' + info.loginInfo.device_id + '</div></div>'; }
+                    }
+                    html += '</div>';
+                }
+                content.innerHTML = html;
+            } else { content.innerHTML = '<div class="text-center py-8 text-secondary"><i class="fa fa-exclamation-circle text-3xl mb-2"></i><p>未登录或未配置</p></div>'; }
+            modal.classList.remove("hidden");
+        }
+        function closeLoginDetail() { document.getElementById("loginDetailModal").classList.add("hidden"); }
+        async function loadAllLoginStatus() {
+            try {
+                const response = await fetch("/?action=login_status");
+                const data = await response.json();
+                if (data.success && data.data) {
+                    loginStatusCache = data.data;
+                    updateLoginCard("gy", data.data.guangya);
+                    updateLoginCard("aliyun", data.data.aliyun);
+                    updateLoginCard("quark", data.data.quark);
+                    updateLoginCard("uc", data.data.uc);
+                    updateLoginCard("mcloud", data.data.mcloud);
+                    updateLoginCard("cloud189", data.data.cloud189);
+                    updateFeijiLoginCard(data.data.feiji);
+                    updateC189LoginCard(data.data.cloud189);
+                    updateIlanzouLoginCard(data.data.ilanzou);
+                    updateLoginCard("pan123", data.data.pan123);
+                }
+            } catch (e) { console.error("加载登录状态失败:", e); }
+        }
+        //  隐藏账号格式函数（如：193******** 或 206******@qq.com）
+        function maskAccount(account) {
+            if (!account) return account;
+            const str = String(account);
+            // 邮箱格式：保留前3位和@后的域名，中间用*号代替
+            if (str.includes("@")) {
+                const [name, domain] = str.split("@");
+                const maskedName = name.substring(0, Math.min(3, name.length)) + "******";
+                return maskedName + "@" + domain;
+            }
+            // 手机号格式：保留前3位，后面用*号代替
+            if (/^d{11}$/.test(str)) {
+                return str.substring(0, 3) + "********";
+            }
+            // 其他格式：保留前3位，后面用*号代替
+            if (str.length > 3) {
+                return str.substring(0, 3) + "******";
+            }
+            return str;
+        }
+        function updateLoginCard(prefix, statusData) {
+            const badge = document.getElementById(prefix + "-status-badge");
+            const source = document.getElementById(prefix + "-status-source");
+            const qrStatus = document.getElementById(prefix + "-qr-status");
+            if (statusData.logged_in) {
+                if (statusData.expired) {
+                    if (badge) { badge.textContent = "已过期"; badge.className = "px-2 py-1 rounded-full text-xs bg-warning/10 text-warning"; }
+                    if (source) { source.textContent = statusData.source === "kv_default" ? "后台扫码配置" : statusData.source === "kv_scan" ? "扫码登录配置" : statusData.source === "env_var" ? "环境变量配置" : statusData.source === "default_config" ? "扫码登录配置" : statusData.source; }
+                    if (qrStatus) { qrStatus.textContent = "已过期 (需重新登录)"; qrStatus.className = "text-xs text-warning"; }
+                } else {
+                    if (badge) { badge.textContent = "已登录"; badge.className = "px-2 py-1 rounded-full text-xs bg-success/10 text-success"; }
+                    if (source) { source.textContent = statusData.source === "kv_default" ? "后台扫码配置" : statusData.source === "kv_scan" ? "扫码登录配置" : statusData.source === "env_var" ? "环境变量配置" : statusData.source === "default_config" ? "扫码登录配置" : statusData.source; }
+                    if (qrStatus) { qrStatus.textContent = "已登录 (" + (statusData.source === "kv_default" || statusData.source === "default_config" || statusData.source === "kv_scan" ? "扫码" : "环境变量") + ")"; qrStatus.className = "text-xs text-success"; }
+                }
+            } else {
+                if (badge) { badge.textContent = "未登录"; badge.className = "px-2 py-1 rounded-full text-xs bg-danger/10 text-danger"; }
+                if (source) { source.textContent = "未配置"; }
+                if (qrStatus) { qrStatus.textContent = "未登录"; qrStatus.className = "text-xs text-secondary"; }
+            }
+        }
+        function toggleManualInput(prefix) { const el = document.getElementById(prefix + "-manual-input"); if (el) el.classList.toggle("hidden"); }
+        // ==================== 天翼云盘扫码登录 (Cloud189/P189) ====================
+        let c189QRInterval = null; let c189CountdownInterval = null; let c189CurrentDeviceId = null;
+        async function startC189QRLogin() {
+            const btn = document.getElementById("c189QRButton");
+            btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 获取二维码...';
+            try {
+                const response = await fetch("/?action=cloud189_qrcode");
+                const data = await response.json();
+                if (data.success && data.data) {
+                    c189CurrentDeviceId = data.data.device_id;
+                    document.getElementById("c189-qr-container").classList.add("hidden");
+                    document.getElementById("c189QRCode").classList.remove("hidden");
+                    document.getElementById("c189LoginSuccess").classList.add("hidden");
+                    document.getElementById("c189QrcodeImage").innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(data.data.qr_url) + '" alt="QR Code" class="mx-auto">';
+                    startC189Countdown(data.data.expires_in || 300);
+                    startC189QRPoll(data.data.device_id, data.data.interval || 3);
+                } else { alert("获取二维码失败: " + (data.msg || "未知错误")); btn.disabled = false; btn.innerHTML = '<i class="fa fa-qrcode"></i> 扫码登录'; }
+            } catch (error) { alert("获取二维码失败，请重试"); btn.disabled = false; btn.innerHTML = '<i class="fa fa-qrcode"></i> 扫码登录'; }
+        }
+        function startC189Countdown(expiresIn) {
+            let remaining = expiresIn;
+            if (c189CountdownInterval) clearInterval(c189CountdownInterval);
+            c189CountdownInterval = setInterval(() => {
+                remaining--;
+                document.getElementById("c189Countdown").style.width = (remaining / expiresIn) * 100 + "%";
+                document.getElementById("c189CountdownText").textContent = remaining + "s";
+                if (remaining <= 0) { clearInterval(c189CountdownInterval); cancelC189QRLogin(); alert("二维码已过期，请重新获取"); }
+            }, 1000);
+        }
+        function startC189QRPoll(deviceId, interval) {
+            if (c189QRInterval) clearInterval(c189QRInterval);
+            document.getElementById("c189QRStatus").textContent = "等待扫码...";
+            c189QRInterval = setInterval(async () => {
+                try {
+                    const response = await fetch("/?action=cloud189_check&device_id=" + deviceId);
+                    const data = await response.json();
+                    if (data.success && data.data) {
+                        if (data.data.status === "success") {
+                            clearInterval(c189QRInterval); clearInterval(c189CountdownInterval);
+                            document.getElementById("c189QRStatus").innerHTML = '<span class="text-success font-semibold">登录成功！</span>';
+                            setTimeout(() => { document.getElementById("c189QRCode").classList.add("hidden"); document.getElementById("c189LoginSuccess").classList.remove("hidden"); loadAllLoginStatus(); }, 1000);
+                            return;
+                        } else if (data.data.status === "scanned") {
+                            document.getElementById("c189QRStatus").innerHTML = '<span class="text-warning font-semibold">已扫码，等待确认...</span>';
+                        } else if (data.data.status === "expired") {
+                            clearInterval(c189QRInterval); clearInterval(c189CountdownInterval);
+                            document.getElementById("c189QRStatus").innerHTML = '<span class="text-danger font-semibold">二维码已过期</span>';
+                            setTimeout(cancelC189QRLogin, 2000); return;
+                        } else if (data.data.status === "waiting" || data.data.status === "polling") {
+                            document.getElementById("c189QRStatus").textContent = "等待扫码...";
+                        }
+                    } else if (!data.success && data.msg) {
+                        console.error("轮询失败:", data.msg);
+                    }
+                } catch (error) { console.error("轮询失败:", error); }
+            }, interval * 1000);
+        }
+        function cancelC189QRLogin() {
+            if (c189QRInterval) { clearInterval(c189QRInterval); c189QRInterval = null; }
+            if (c189CountdownInterval) { clearInterval(c189CountdownInterval); c189CountdownInterval = null; }
+            c189CurrentDeviceId = null;
+            document.getElementById("c189-qr-container").classList.remove("hidden");
+            document.getElementById("c189QRCode").classList.add("hidden");
+            document.getElementById("c189LoginSuccess").classList.add("hidden");
+            document.getElementById("c189QRButton").disabled = false;
+            document.getElementById("c189QRButton").innerHTML = '<i class="fa fa-qrcode"></i> 扫码登录';
+            document.getElementById("c189QrcodeImage").innerHTML = "";
+            document.getElementById("c189Countdown").style.width = "100%";
+            document.getElementById("c189CountdownText").textContent = "300s";
+            document.getElementById("c189QRStatus").textContent = "等待扫码...";
+        }
+        async function checkC189Status() {
+            try {
+                const response = await fetch("/?action=cloud189_status");
+                const data = await response.json();
+                updateC189LoginCard(data.data);
+            } catch (e) { console.error("检查天翼云盘登录状态失败:", e); }
+        }
+        async function logoutFeiji() {
+            if (!confirm("确定要退出小飞机云盘登录吗？将清除所有登录缓存和账号配置。")) return;
+            try {
+                const response = await fetch("/?action=feiji_logout");
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById("feijiLoginSuccess").classList.add("hidden");
+                    document.getElementById("feiji-qr-container").classList.remove("hidden");
+                    document.getElementById("feijiAccountLogin").classList.add("hidden");
+                    document.getElementById("feijiManualInput").classList.add("hidden");
+                    document.getElementById("feijiUsernameInput").value = "";
+                    document.getElementById("feijiPasswordInput").value = "";
+                    loadAllLoginStatus();
+                } else { alert("退出失败: " + (data.msg || "未知错误")); }
+            } catch (e) { alert("退出失败，请重试"); }
+        }
+        async function logoutC189() {
+            if (!confirm("确定要退出天翼云盘登录吗？")) return;
+            try {
+                const response = await fetch("/?action=cloud189_logout");
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById("c189-login-status").classList.add("hidden");
+                    document.getElementById("c189-qr-container").classList.remove("hidden");
+                    document.getElementById("c189LoginSuccess").classList.add("hidden");
+                    loadAllLoginStatus();
+                } else { alert("退出失败: " + (data.msg || "未知错误")); }
+            } catch (e) { alert("退出失败，请重试"); }
+        }
+        async function saveC189ManualLogin() {
+            const accessToken = document.getElementById("c189TokenInput").value.trim();
+            if (!accessToken) { alert("请输入AccessToken"); return; }
+            try {
+                const response = await fetch("/?action=cloud189_manual_save&access_token=" + encodeURIComponent(accessToken));
+                const data = await response.json();
+                if (data.success) { alert("保存成功！"); loadAllLoginStatus(); document.getElementById("c189-manual-input").classList.add("hidden"); document.getElementById("c189TokenInput").value = ""; }
+                else { alert("保存失败: " + (data.msg || "未知错误")); }
+            } catch (error) { alert("保存失败，请重试"); }
+        }
+        function updateFeijiLoginCard(statusData) {
+            const qrStatus = document.getElementById("feiji-qr-status");
+            const successDiv = document.getElementById("feijiLoginSuccess");
+            const qrContainer = document.getElementById("feiji-qr-container");
+            if (!statusData) return;
+            if (statusData.logged_in) {
+                if (qrStatus) { qrStatus.textContent = "已登录 (" + maskAccount(statusData.username || "账号密码") + ")"; qrStatus.className = "text-xs text-success"; }
+                if (successDiv) successDiv.classList.remove("hidden");
+                if (qrContainer) qrContainer.classList.add("hidden");
+            } else if (statusData.username) {
+                if (qrStatus) { qrStatus.textContent = "已配置账号 (" + statusData.username + ")，待登录"; qrStatus.className = "text-xs text-warning"; }
+            } else {
+                if (qrStatus) { qrStatus.textContent = "未登录（大于300MB需登录）"; qrStatus.className = "text-xs text-secondary"; }
+            }
+        }
+        function updateC189LoginCard(statusData) {
+            const statusEl = document.getElementById("c189-login-status");
+            const statusText = document.getElementById("c189StatusText");
+            if (!statusData || !statusData.logged_in) {
+                if (statusEl) statusEl.classList.add("hidden");
+                return;
+            }
+            if (statusEl) statusEl.classList.remove("hidden");
+            if (statusText) {
+                const source = statusData.source === "qrcode" ? "扫码登录" : statusData.source === "env_var" ? "环境变量" : statusData.source || "已登录";
+                const expired = statusData.expired ? " (已过期)" : "";
+                statusText.textContent = source + expired;
+            }
+        }
+        function updateIlanzouLoginCard(statusData) {
+            const statusEl = document.getElementById("ilanzou-login-status");
+            const container = document.getElementById("ilanzou-login-container");
+            const successEl = document.getElementById("ilanzouLoginSuccess");
+            if (!statusData || !statusData.logged_in) {
+                if (statusEl) statusEl.textContent = "未登录";
+                if (container) container.classList.remove("hidden");
+                if (successEl) successEl.classList.add("hidden");
+                return;
+            }
+            if (statusEl) {
+                const nickname = statusData.nickname || statusData.username || "已登录";
+                const expired = statusData.expired ? " (已过期)" : "";
+                statusEl.textContent = "已登录: " + maskAccount(nickname) + expired;
+            }
+            if (container) container.classList.add("hidden");
+            if (successEl) successEl.classList.remove("hidden");
+        }
+        
+        async function checkC189FrontendStatus() {
+            const statusDiv = document.getElementById("c189FrontendStatus");
+            if (!statusDiv) return;
+            
+            statusDiv.classList.remove("hidden");
+            statusDiv.innerHTML = '<i class="fa fa-spinner fa-spin text-primary"></i> 检查中...';
+            
+            try {
+                const response = await fetch("/?action=login_status");
+                const data = await response.json();
+                
+                if (data.success && data.data?.cloud189) {
+                    const c189 = data.data.cloud189;
+                    if (c189.logged_in && !c189.expired) {
+                        statusDiv.className = "mt-2 p-2 bg-success/10 rounded-lg text-xs text-success";
+                        statusDiv.innerHTML = `<i class="fa fa-check-circle mr-1"></i>${c189.source === "qrcode" ? "扫码登录有效" : c189.source === "env_var" ? "环境变量有效" : "已登录"} (${c189.has_open_token ? "有Token" : "无Token"})`;
+                    } else {
+                        statusDiv.className = "mt-2 p-2 bg-warning/10 rounded-lg text-xs text-warning";
+                        statusDiv.innerHTML = `<i class="fa fa-exclamation-circle mr-1"></i>未登录或已过期，请扫码或填写Token`;
+                    }
+                } else {
+                    statusDiv.className = "mt-2 p-2 bg-gray-100 rounded-lg text-xs text-gray-500";
+                    statusDiv.innerHTML = `<i class="fa fa-info-circle mr-1"></i>未检测到登录信息`;
+                }
+            } catch(e) {
+                statusDiv.className = "mt-2 p-2 bg-danger/10 rounded-lg text-xs text-danger";
+                statusDiv.innerHTML = `<i class="fa fa-times-circle mr-1"></i>检查失败: ${e.message}`;
+            }
+        }
+        document.addEventListener("DOMContentLoaded", function() { startStatsPolling(); initCharts(); loadAllLoginStatus(); });
+        let statsInterval = null;
+        async function loadStats() {
+            try {
+                const response = await fetch("/admin/?action=get_stats");
+                const data = await response.json();
+                if (data.success) {
+                    const stats = data.data;
+                    document.getElementById("totalRequests").textContent = stats.total || 0;
+                    document.getElementById("successRequests").textContent = stats.success || 0;
+                    document.getElementById("failedRequests").textContent = stats.failed || 0;
+                    document.getElementById("cachedRequests").textContent = stats.cached || 0;
+                    document.getElementById("lastUpdate").textContent = new Date().toLocaleString("zh-CN");
+                    const total = stats.total || 0;
+                    document.getElementById("successRate").textContent = (total > 0 ? ((stats.success / total) * 100).toFixed(1) : "0.0") + "%";
+                    document.getElementById("cacheRate").textContent = (total > 0 ? ((stats.cached / total) * 100).toFixed(1) : "0.0") + "%";
+                    updateCharts(stats);
+                }
+            } catch (error) { console.error("加载统计数据失败:", error); }
+        }
+        function startStatsPolling() {
+            if (statsInterval) clearInterval(statsInterval);
+            loadStats();
+            statsInterval = setInterval(loadStats, 3000);
+        }
+        function stopStatsPolling() {
+            if (statsInterval) { clearInterval(statsInterval); statsInterval = null; }
+        }
+        function initCharts() {
+            const successCtx = document.getElementById("successRateChart");
+            if (!successCtx) return;
+            successRateChart = new Chart(successCtx.getContext("2d"), { type: "doughnut", data: { labels: ["成功", "失败"], datasets: [{ data: [0, 0], backgroundColor: ["#10b981", "#ef4444"], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } } });
+            const statsCtx = document.getElementById("statsChart");
+            if (!statsCtx) return;
+            statsChart = new Chart(statsCtx.getContext("2d"), { type: "bar", data: { labels: ["总数", "成功", "失败", "缓存"], datasets: [{ label: "解析统计", data: [0, 0, 0, 0], backgroundColor: ["#3b82f6", "#10b981", "#ef4444", "#64748b"], borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } } });
+        }
+        function updateCharts(stats) {
+            if (successRateChart) { successRateChart.data.datasets[0].data = [stats.success || 0, stats.failed || 0]; successRateChart.update(); }
+            if (statsChart) { statsChart.data.datasets[0].data = [stats.total || 0, stats.success || 0, stats.failed || 0, stats.cached || 0]; statsChart.update(); }
+        }
+        function switchTab(tab) {
+            currentTab = tab;
+            const tabSuccess = document.getElementById("tabSuccess");
+            const tabFailed = document.getElementById("tabFailed");
+            if (tab === "success") { tabSuccess.className = "px-4 py-2 rounded-lg font-medium transition-all bg-success text-white"; tabFailed.className = "px-4 py-2 rounded-lg font-medium transition-all bg-gray-200 text-gray-600 hover:bg-gray-300"; }
+            else { tabSuccess.className = "px-4 py-2 rounded-lg font-medium transition-all bg-gray-200 text-gray-600 hover:bg-gray-300"; tabFailed.className = "px-4 py-2 rounded-lg font-medium transition-all bg-danger text-white"; }
+            loadRecords(1);
+        }
+        async function loadRecords(pageNum = currentPage) {
+            try {
+                currentPage = pageNum;
+                const recordsList = document.getElementById("recordsList");
+                if (recordsList) recordsList.innerHTML = '<div class="text-center py-12 text-secondary"><i class="fa fa-spinner fa-spin text-4xl mb-4 opacity-50"></i><p class="text-lg">加载中...</p></div>';
+                const searchInput = document.getElementById("recordSearchInput");
+                const searchTerm = searchInput ? searchInput.value.trim() : "";
+                
+                if (searchTerm) {
+                    await searchRecords(searchTerm);
+                    return;
+                }
+                
+                var url = "/admin/?action=get_records&page=" + pageNum + "&limit=10&type=" + currentTab;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.success) { 
+                    allRecords = data.data; 
+                    renderRecords(); 
+                } else { 
+                    showRecordsError(data.msg); 
+                }
+            } catch (error) { showRecordsError("加载失败: " + error.message); }
+        }
+        function renderRecords() {
+            const recordsList = document.getElementById("recordsList");
+            const searchInput = document.getElementById("recordSearchInput");
+            const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : "";
+            
+            var records = currentTab === "success" ? (allRecords.success || []) : (allRecords.failed || []);
+            var totalRecords = allRecords.total || 0;
+            var currentPageNum = allRecords.page || 1;
+            var pageLimit = allRecords.limit || 10;
+            var successTotalCount = allRecords.successTotal || 0;
+            var failedTotalCount = allRecords.failedTotal || 0;
+            var totalPages = Math.max(1, Math.ceil((currentTab === "success" ? successTotalCount : failedTotalCount) / pageLimit));
+            var hasPrev = currentPageNum > 1;
+            var hasNext = currentPageNum < totalPages;
+            
+            // 更新计数
+            const successCountEl = document.getElementById("successCount");
+            const failedCountEl = document.getElementById("failedCount");
+            if (searchTerm) {
+                if (currentTab === "success") {
+                    if (successCountEl) successCountEl.textContent = "(" + records.length + "/搜索结果)";
+                    if (failedCountEl) failedCountEl.textContent = "(" + (allRecords.failed ? allRecords.failed.length : 0) + "/搜索结果)";
+                } else {
+                    if (successCountEl) successCountEl.textContent = "(" + (allRecords.success ? allRecords.success.length : 0) + "/搜索结果)";
+                    if (failedCountEl) failedCountEl.textContent = "(" + records.length + "/搜索结果)";
+                }
+            } else {
+                if (currentTab === "success") {
+                    if (successCountEl) successCountEl.textContent = "(" + successTotalCount + "/第" + currentPageNum + "页)";
+                    if (failedCountEl) failedCountEl.textContent = "(" + failedTotalCount + ")";
+                } else {
+                    if (successCountEl) successCountEl.textContent = "(" + successTotalCount + ")";
+                    if (failedCountEl) failedCountEl.textContent = "(" + failedTotalCount + "/第" + currentPageNum + "页)";
+                }
+            }
+            
+            if (records.length === 0) { 
+                if (searchTerm) {
+                    recordsList.innerHTML = '<div class="text-center py-12 text-secondary"><i class="fa fa-search text-4xl mb-4 opacity-50"></i><p class="text-lg">未找到匹配的记录</p><p class="text-sm mt-2 text-gray-400">搜索关键词: "' + escapeHtml(searchTerm) + '"</p></div>';
+                } else {
+                    recordsList.innerHTML = '<div class="text-center py-12 text-secondary"><i class="fa fa-inbox text-4xl mb-4 opacity-50"></i><p class="text-lg">暂无' + (currentTab === "success" ? "成功" : "失败") + '记录</p></div>'; 
+                }
+                return; 
+            }
+            
+            let html = '';
+            // 使用存储的搜索词或当前输入框的值进行高亮
+            let searchHighlight = null;
+            if (allRecords._isSearch && allRecords._searchTerm) {
+                searchHighlight = new RegExp("(" + escapeRegExp(allRecords._searchTerm.toLowerCase()) + ")", "gi");
+            } else if (searchTerm) {
+                searchHighlight = new RegExp("(" + escapeRegExp(searchTerm) + ")", "gi");
+            }
+            records.forEach(function(record, index) {
+                const timeStr = new Date(record.timestamp).toLocaleString("zh-CN");
+                const statusClass = record.success ? "success" : "danger";
+                const statusIcon = record.success ? "fa-check-circle" : "fa-times-circle";
+                const statusText = record.success ? "解析成功" : "解析失败";
+                // 高亮搜索关键词
+                function highlight(text) {
+                    if (!searchTerm || !text) return escapeHtml(text);
+                    return escapeHtml(text).replace(searchHighlight, "<mark class='bg-yellow-200 px-0.5 rounded'>$1</mark>");
+                }
+                html += '<div class="bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow border-l-4 border-' + statusClass + ' group">';
+                html += '<div class="flex items-start justify-between mb-3"><div class="flex items-center gap-2"><i class="fa ' + statusIcon + ' text-' + statusClass + '"></i><span class="font-medium text-dark">' + statusText + '</span></div><span class="text-sm text-secondary">' + timeStr + '</span></div>';
+                html += '<div class="space-y-2"><div class="bg-white rounded p-3"><div class="flex items-center gap-2 mb-2"><i class="fa fa-link text-primary"></i><span class="text-sm font-medium text-gray-700">解析链接：</span></div><div class="bg-gray-50 rounded p-2 text-sm break-all">' + highlight(record.url) + '</div></div>';
+                if (record.pwd) html += '<div class="bg-white rounded p-3"><div class="flex items-center gap-2 mb-2"><i class="fa fa-key text-warning"></i><span class="text-sm font-medium text-gray-700">分享密码：</span></div><div class="bg-gray-50 rounded p-2 text-sm font-mono">' + highlight(record.pwd) + '</div></div>';
+                html += '<div class="bg-white rounded p-3"><div class="flex items-center gap-2 mb-2"><i class="fa fa-info-circle text-secondary"></i><span class="text-sm font-medium text-gray-700">解析结果：</span></div><div class="space-y-1"><div class="flex items-center gap-2 text-sm"><span class="text-secondary">状态码：</span><span class="font-mono bg-gray-100 px-2 py-1 rounded">' + highlight(String(record.code)) + '</span></div><div class="text-sm text-gray-600">' + highlight(record.msg) + '</div>';
+                if (record.data) html += '<details class="mt-2"><summary class="cursor-pointer text-primary text-sm font-medium hover:text-primary/80 flex items-center gap-1"><i class="fa fa-code"></i> 查看详细数据</summary><pre class="bg-gray-900 text-green-400 p-3 rounded mt-2 text-xs overflow-x-auto">' + JSON.stringify(record.data, null, 2) + '</pre></details>';
+                html += '</div></div></div>';
+                html += '<div class="mt-3 pt-2 border-t border-gray-200 flex items-center"><button onclick="deleteRecord(\'' + record.id + '\', event)" class="text-xs text-danger hover:text-danger/80 hover:bg-danger/10 px-2 py-1 rounded transition-all flex items-center gap-1"><i class="fa fa-trash-o"></i> 删除此记录</button></div>';
+                html += '</div>';
+            });
+            
+            if (!searchTerm) {
+                if (totalPages > 1) {
+                    html += '<div class="flex items-center justify-center mt-6 space-x-2">';
+                    if (hasPrev) html += '<button onclick="loadRecords(' + (currentPageNum - 1) + ')" class="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-100"><i class="fa fa-chevron-left"></i></button>';
+                    
+                    let startPage = Math.max(1, currentPageNum - 4);
+                    let endPage = Math.min(totalPages, currentPageNum + 4);
+                    if (endPage - startPage < 9) {
+                        if (startPage === 1) endPage = Math.min(10, totalPages);
+                        if (endPage === totalPages) startPage = Math.max(1, totalPages - 9);
+                    }
+                    
+                    for (let i = startPage; i <= endPage; i++) {
+                        if (i === currentPageNum) {
+                            html += '<button class="px-3 py-1 bg-primary text-white rounded-md">'+ i +'</button>';
+                        } else {
+                            html += '<button onclick="loadRecords(' + i + ')" class="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-100">'+ i +'</button>';
+                        }
+                    }
+                    
+                    if (hasNext) html += '<button onclick="loadRecords(' + (currentPageNum + 1) + ')" class="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-100"><i class="fa fa-chevron-right"></i></button>';
+                    html += '</div>';
+                    html += '<div class="text-center mt-4 text-sm text-secondary">第 ' + currentPageNum + ' / ' + totalPages + ' 页，共 ' + totalRecords + ' 条记录</div>';
+                } else {
+                    html += '<div class="text-center mt-4 text-sm text-secondary">共 ' + totalRecords + ' 条记录</div>';
+                }
+            } else {
+                html += '<div class="text-center mt-4 text-sm text-secondary">搜索结果: 共 ' + totalRecords + ' 条记录</div>';
+            }
+            recordsList.innerHTML = html;
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+        async function searchRecords(term) {
+            currentPage = 1;
+            const recordsList = document.getElementById("recordsList");
+            if (recordsList) recordsList.innerHTML = '<div class="text-center py-12 text-secondary"><i class="fa fa-spinner fa-spin text-4xl mb-4 opacity-50"></i><p class="text-lg">搜索中...</p></div>';
+            try {
+                // 使用独立的搜索接口（只传搜索内容）
+                const url = "/admin/?action=search_records&search=" + encodeURIComponent(term);
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.success) {
+                    allRecords = data.data;
+                    // 标记为搜索模式，用于高亮显示
+                    allRecords._isSearch = true;
+                    allRecords._searchTerm = term;
+                    renderRecords();
+                } else {
+                    showRecordsError(data.msg || "搜索失败");
+                }
+            } catch (error) {
+                showRecordsError("搜索失败: " + error.message);
+            }
+        }
+        async function deleteRecord(recordId, event) {
+            if (event) event.stopPropagation();
+            if (!confirm("确定要删除这条解析记录吗？")) return;
+            try {
+                const response = await fetch("/admin/?action=delete_record&record_id=" + encodeURIComponent(recordId));
+                const result = await response.json();
+                if (result.success) {
+                    loadRecords();  // 重新加载记录列表
+                } else {
+                    alert("删除失败: " + (result.msg || "未知错误"));
+                }
+            } catch (e) {
+                alert("删除失败: " + e.message);
+            }
+        }
+        let clearCancelled = false;
+        let clearBackgroundMode = false;
+        function showClearProgressModal(total) {
+            const overlay = document.createElement("div");
+            overlay.id = "clearProgressOverlay";
+            overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);z-index:9999;display:flex;align-items:center;justify-content:center";
+            overlay.innerHTML = '<div style="background:#fff;border-radius:16px;padding:32px 40px;min-width:420px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,0.3)">' +
+                '<div style="font-size:18px;font-weight:600;color:#1a1a2e;margin-bottom:8px;text-align:center">清空解析记录</div>' +
+                '<div id="clearProgressText" style="color:#666;text-align:center;margin-bottom:16px;font-size:14px">正在清空记录...</div>' +
+                '<div style="background:#f0f0f5;border-radius:10px;height:16px;overflow:hidden;margin-bottom:24px">' +
+                    '<div id="clearProgressBar" style="background:linear-gradient(90deg,#22c55e,#16a34a);height:100%;width:0%;border-radius:10px;transition:width 0.3s ease"></div>' +
+                '</div>' +
+                '<div id="clearProgressPercent" style="text-center;font-size:15px;font-weight:600;color:#22c55e;margin-bottom:20px">0%</div>' +
+                '<div style="display:flex;gap:12px;justify-content:center">' +
+                    '<button id="clearCancelBtn" onclick="cancelClearOperation()" style="padding:10px 28px;border-radius:10px;border:2px solid #e5e7eb;background:#fff;color:#374151;font-size:14px;font-weight:500;cursor:pointer;transition:all 0.2s">取消清空</button>' +
+                    '<button id="clearBgBtn" onclick="switchToBackgroundMode()" style="padding:10px 28px;border-radius:10px;border:none;background:#3b82f6;color:#fff;font-size:14px;font-weight:500;cursor:pointer;transition:all 0.2s">后台执行</button>' +
+                '</div></div>';
+            document.body.appendChild(overlay);
+        }
+        function updateClearProgress(current, total) {
+            const pct = total > 0 ? Math.round((current / total) * 100) : 100;
+            const bar = document.getElementById("clearProgressBar");
+            const txt = document.getElementById("clearProgressPercent");
+            const info = document.getElementById("clearProgressText");
+            if (bar) bar.style.width = pct + "%";
+            if (txt) txt.textContent = pct + "%";
+            if (info) info.textContent = "已清空 " + current + " / " + total + " 条记录";
+        }
+        function closeClearModal() {
+            const el = document.getElementById("clearProgressOverlay");
+            if (el) el.remove();
+        }
+        function cancelClearOperation() {
+            clearCancelled = true;
+            fetch("/admin/?action=cancel_clear").catch(() => {});
+            closeClearModal();
+            loadRecords();
+        }
+        function switchToBackgroundMode() {
+            clearBackgroundMode = true;
+            closeClearModal();
+        }
+        function showNotification(message) {
+            const existing = document.getElementById("globalNotification");
+            if (existing) existing.remove();
+            const notif = document.createElement("div");
+            notif.id = "globalNotification";
+            notif.style.cssText = "position:fixed;bottom:24px;left:24px;z-index:10000;background:#22c55e;color:#fff;padding:16px 28px;border-radius:12px;font-size:15px;font-weight:600;box-shadow:0 8px 30px rgba(34,197,94,0.4);animation:slideInRight 0.3s ease;max-width:360px;display:flex;align-items:center;gap:10px";
+            notif.innerHTML = '<span>✓</span><span>' + message + '</span>';
+            document.body.appendChild(notif);
+            setTimeout(() => { if (notif.parentNode) notif.style.opacity = "0"; setTimeout(() => notif.remove(), 300); }, 5000);
+        }
+        async function clearAllRecords() {
+            const totalRecords = (allRecords.successTotal || 0) + (allRecords.failedTotal || 0);
+            if (totalRecords === 0) { alert("暂无解析记录需要清空"); return; }
+            clearCancelled = false;
+            clearBackgroundMode = false;
+            showClearProgressModal(totalRecords);
+            let deletedSoFar = 0;
+            try {
+                while (!clearCancelled && !clearBackgroundMode) {
+                    const res = await fetch("/admin/?action=delete_batch_records&limit=10");
+                    const data = await res.json();
+                    if (!data.success || data.cancelled) break;
+                    deletedSoFar += data.deleted_count;
+                    updateClearProgress(deletedSoFar, totalRecords);
+                    if (data.remaining === 0 || data.finished) break;
+                    await new Promise(r => setTimeout(r, 150));
+                }
+                if (clearBackgroundMode) {
+                    while (true) {
+                        try {
+                            const bgRes = await fetch("/admin/?action=delete_batch_records&limit=10");
+                            const bgData = await bgRes.json();
+                            deletedSoFar += bgData.deleted_count || 0;
+                            if (bgData.cancelled || !bgData.success || bgData.remaining === 0 || bgData.finished) {
+                                showNotification("解析记录已清空完成");
+                                loadRecords();
+                                return;
+                            }
+                        } catch(e) {}
+                        await new Promise(r => setTimeout(r, 5000));
+                    }
+                }
+                closeClearModal();
+                loadRecords();
+            } catch (e) {
+                closeClearModal();
+                alert("清空失败: " + e.message);
+            }
+        }
+        function escapeHtml(text) {
+            if (!text) return "";
+            return String(text)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+        function escapeRegExp(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+        function changePage(page) { loadRecords(page); }
+        function showRecordsError(message) { document.getElementById("recordsList").innerHTML = '<div class="text-center py-12 text-danger"><i class="fa fa-exclamation-triangle text-4xl mb-4"></i><p class="text-lg">' + message + '</p></div>'; }
+        async function startGuangyaQRLogin() {
+            const btn = document.getElementById("guangyaQRButton");
+            btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 获取二维码...';
+            try {
+                const response = await fetch("/?action=guangya_qrcode");
+                const data = await response.json();
+                if (data.success && data.data) {
+                    currentDeviceId = data.data.device_id; currentExpiresIn = data.data.expires_in || 600;
+                    document.getElementById("gy-qr-container").classList.add("hidden");
+                    document.getElementById("guangyaQRCode").classList.remove("hidden");
+                    document.getElementById("guangyaLoginSuccess").classList.add("hidden");
+                    document.getElementById("qrcodeImage").innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(data.data.verification_uri_complete) + '" alt="QR Code" class="mx-auto">';
+                    document.getElementById("userCodeDisplay").textContent = data.data.user_code;
+                    startQRCountdown(currentExpiresIn);
+                    startQRPoll(data.data.device_id, data.data.interval || 5);
+                } else { alert("获取二维码失败: " + (data.msg || "未知错误")); btn.disabled = false; btn.innerHTML = '<i class="fa fa-qrcode"></i> 扫码登录'; }
+            } catch (error) { alert("获取二维码失败，请重试"); btn.disabled = false; btn.innerHTML = '<i class="fa fa-qrcode"></i> 扫码登录'; }
+        }
+        function startQRCountdown(expiresIn) {
+            let remaining = expiresIn;
+            if (guangyaQRCountdownInterval) clearInterval(guangyaQRCountdownInterval);
+            guangyaQRCountdownInterval = setInterval(() => {
+                remaining--;
+                document.getElementById("qrCountdown").style.width = (remaining / expiresIn) * 100 + "%";
+                document.getElementById("qrCountdownText").textContent = remaining + "s";
+                if (remaining <= 0) { clearInterval(guangyaQRCountdownInterval); cancelGuangyaQRLogin(); alert("二维码已过期，请重新获取"); }
+            }, 1000);
+        }
+        function startQRPoll(deviceId, interval) {
+            if (guangyaQRInterval) clearInterval(guangyaQRInterval);
+            document.getElementById("guangyaQRStatus").textContent = "等待扫码...";
+            guangyaQRInterval = setInterval(async () => {
+                try {
+                    const response = await fetch("/?action=guangya_qr_poll&device_id=" + deviceId);
+                    const data = await response.json();
+                    if (data.success && data.data) {
+                        if (data.data.status === "confirmed") {
+                            clearInterval(guangyaQRInterval); clearInterval(guangyaQRCountdownInterval);
+                            document.getElementById("guangyaQRStatus").innerHTML = '<span class="text-success font-semibold">扫码成功！</span>';
+                            await saveGuangyaLogin(data.data);
+                            setTimeout(() => { document.getElementById("guangyaQRCode").classList.add("hidden"); document.getElementById("guangyaLoginSuccess").classList.remove("hidden"); loadAllLoginStatus(); }, 1000);
+                            return;
+                        } else if (data.data.status === "denied") {
+                            clearInterval(guangyaQRInterval); clearInterval(guangyaQRCountdownInterval);
+                            document.getElementById("guangyaQRStatus").innerHTML = '<span class="text-danger font-semibold">扫码被拒绝</span>';
+                            setTimeout(cancelGuangyaQRLogin, 2000); return;
+                        } else if (data.data.status === "expired") {
+                            clearInterval(guangyaQRInterval); clearInterval(guangyaQRCountdownInterval);
+                            document.getElementById("guangyaQRStatus").innerHTML = '<span class="text-danger font-semibold">二维码已过期</span>';
+                            setTimeout(cancelGuangyaQRLogin, 2000); return;
+                        }
+                    }
+                } catch (error) { console.error("轮询失败:", error); }
+            }, interval * 1000);
+        }
+        async function saveGuangyaLogin(loginData) {
+            try {
+                const params = new URLSearchParams();
+                params.append("access_token", loginData.access_token);
+                if (loginData.refresh_token) params.append("refresh_token", loginData.refresh_token);
+                if (loginData.expires_in) params.append("expires_in", loginData.expires_in);
+                if (loginData.device_id) params.append("device_id", loginData.device_id);
+                const response = await fetch("/?action=guangya_qr_save&" + params.toString());
+                const data = await response.json();
+                if (data.success) console.log("登录信息已保存到默认配置");
+                else console.error("保存登录信息失败:", data.msg);
+            } catch (error) { console.error("保存登录信息失败:", error); }
+        }
+        function cancelGuangyaQRLogin() {
+            if (guangyaQRInterval) { clearInterval(guangyaQRInterval); guangyaQRInterval = null; }
+            if (guangyaQRCountdownInterval) { clearInterval(guangyaQRCountdownInterval); guangyaQRCountdownInterval = null; }
+            currentDeviceId = null;
+            document.getElementById("gy-qr-container").classList.remove("hidden");
+            document.getElementById("guangyaQRCode").classList.add("hidden");
+            document.getElementById("guangyaLoginSuccess").classList.add("hidden");
+            document.getElementById("guangyaQRButton").disabled = false;
+            document.getElementById("guangyaQRButton").innerHTML = '<i class="fa fa-qrcode"></i> 扫码登录';
+            document.getElementById("qrcodeImage").innerHTML = "";
+            document.getElementById("userCodeDisplay").textContent = "";
+            document.getElementById("qrCountdown").style.width = "100%";
+            document.getElementById("qrCountdownText").textContent = "600s";
+            document.getElementById("guangyaQRStatus").textContent = "等待扫码...";
+        }
+        async function saveGuangyaManualLogin() {
+            const accessToken = document.getElementById("guangyaAccessToken").value.trim();
+            const refreshToken = document.getElementById("guangyaRefreshToken").value.trim();
+            if (!accessToken) { alert("请输入access_token"); return; }
+            try {
+                const params = new URLSearchParams();
+                params.append("access_token", accessToken);
+                if (refreshToken) params.append("refresh_token", refreshToken);
+                params.append("expires_in", "604800");
+                const response = await fetch("/?action=guangya_qr_save&" + params.toString());
+                const data = await response.json();
+                if (data.success) { alert("登录信息已保存！"); loadAllLoginStatus(); document.getElementById("gy-manual-input").classList.add("hidden"); document.getElementById("guangyaAccessToken").value = ""; document.getElementById("guangyaRefreshToken").value = ""; }
+                else { alert("保存失败: " + (data.msg || "未知错误")); }
+            } catch (error) { alert("保存失败，请重试"); }
+        }
+        // ==================== 小飞机云盘登录 ====================
+        let feijiQRInterval = null; let feijiCountdownInterval = null; let feijiCurrentDeviceId = null; let feijiCurrentExpiresIn = 600;
+        async function startFeijiQRLogin() {
+            const btn = document.getElementById("feijiQRButton");
+            btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 加载...';
+            try {
+                document.getElementById("feiji-qr-container").classList.add("hidden");
+                document.getElementById("feijiLoginSuccess").classList.add("hidden");
+                document.getElementById("feijiAccountLogin").classList.remove("hidden");
+                document.getElementById("feijiManualInput").classList.remove("hidden");
+                btn.disabled = false; btn.innerHTML = '<i class="fa fa-qrcode"></i> 登录配置';
+            } catch (error) { alert("加载失败，请重试"); btn.disabled = false; btn.innerHTML = '<i class="fa fa-qrcode"></i> 登录配置'; }
+        }
+        async function doFeijiAccountLogin() {
+            const username = document.getElementById("feijiUsernameInput").value.trim();
+            const password = document.getElementById("feijiPasswordInput").value.trim();
+            const btn = document.getElementById("feijiAccountLoginBtn");
+            const status = document.getElementById("feijiAccountStatus");
+            if (!username || !password) { status.classList.remove("hidden"); status.className = "text-xs p-2 rounded bg-red-100 text-red-700"; status.textContent = "❌ 请输入用户名和密码"; return; }
+            btn.disabled = true; btn.textContent = "⏳ 登录中..."; status.classList.remove("hidden"); status.className = "text-xs p-2 rounded bg-blue-100 text-blue-700"; status.textContent = "🔄 正在连接服务器...";
+            try {
+                const response = await fetch("/?action=feiji_login&username=" + encodeURIComponent(username) + "&password=" + encodeURIComponent(password));
+                const data = await response.json();
+                btn.disabled = false; btn.textContent = "🔐 登录并保存";
+                if (data.success) {
+                    status.className = "text-xs p-2 rounded bg-green-100 text-green-700";
+                    status.innerHTML = " " + data.msg + "<br><small>" + (data.data.hint || "") + "</small>";
+                    setTimeout(() => { location.reload(); }, 2000);
+                } else {
+                    status.className = "text-xs p-2 rounded bg-red-100 text-red-700";
+                    status.innerHTML = "❌ " + data.msg + (data.data.hint ? '<br><details><summary style="cursor:pointer">详细提示</summary><pre style="font-size:11px;margin-top:4px;white-space:pre-wrap">' + data.data.hint + "</pre></details>" : "");
+                }
+            } catch (error) { btn.disabled = false; btn.textContent = "🔐 登录并保存"; status.classList.remove("hidden"); status.className = "text-xs p-2 rounded bg-red-100 text-red-700"; status.textContent = "❌ 网络错误: " + error.message; }
+        }
+        function startFeijiQRCountdown(expiresIn) {
+            let remaining = expiresIn;
+            if (feijiCountdownInterval) clearInterval(feijiCountdownInterval);
+            feijiCountdownInterval = setInterval(() => {
+                remaining--;
+                document.getElementById("feijiCountdown").style.width = (remaining / expiresIn) * 100 + "%";
+                document.getElementById("feijiCountdownText").textContent = remaining + "s";
+                if (remaining <= 0) { clearInterval(feijiCountdownInterval); cancelFeijiQRLogin(); alert("已过期，请重新获取"); }
+            }, 1000);
+        }
+        function startFeijiQRPoll(deviceId, interval) {
+            if (feijiQRInterval) clearInterval(feijiQRInterval);
+            document.getElementById("feijiQRStatus").textContent = "等待操作...";
+            feijiQRInterval = setInterval(async () => {
+                try {
+                    const response = await fetch("/?action=feiji_qr_poll&device_id=" + deviceId);
+                    const data = await response.json();
+                    if (data.success && data.data) {
+                        if (data.data.status === "success") {
+                            clearInterval(feijiQRInterval); clearInterval(feijiCountdownInterval);
+                            document.getElementById("feijiQRStatus").innerHTML = '<span class="text-success font-semibold">登录成功！</span>';
+                            saveFeijiLogin(data.data);
+                            setTimeout(() => { document.getElementById("feijiQRCode").classList.add("hidden"); document.getElementById("feijiManualInput").classList.add("hidden"); document.getElementById("feijiLoginSuccess").classList.remove("hidden"); loadAllLoginStatus(); }, 1000);
+                            return;
+                        } else if (data.data.status === "expired") {
+                            clearInterval(feijiQRInterval); clearInterval(feijiCountdownInterval);
+                            document.getElementById("feijiQRStatus").innerHTML = '<span class="text-danger font-semibold">已过期</span>';
+                            setTimeout(cancelFeijiQRLogin, 2000); return;
+                        }
+                    }
+                } catch (error) { console.error("轮询失败:", error); }
+            }, interval * 1000);
+        }
+        async function saveFeijiLogin(loginData) {
+            try {
+                const params = new URLSearchParams();
+                params.append("access_token", loginData.access_token || "");
+                params.append("refresh_token", loginData.refresh_token || "");
+                params.append("expires_in", String(loginData.expires_in || 2592000));
+                params.append("device_id", loginData.device_id || feijiCurrentDeviceId || "");
+                params.append("login_method", loginData.token_type || "oauth");
+                const response = await fetch("/?action=feiji_qr_save&" + params.toString());
+                const result = await response.json();
+                if (!result.success) console.error("[小飞机] 保存失败:", result.msg);
+            } catch (e) { console.error("[小飞机] 保存异常:", e); }
+        }
+        async function saveFeijiManualLogin() {
+            const tokenValue = document.getElementById("feijiTokenInput").value.trim();
+            if (!tokenValue) { alert("请输入Token或Cookie"); return; }
+            try {
+                const isCookie = tokenValue.includes("=") && tokenValue.includes(";");
+                const params = new URLSearchParams();
+                if (isCookie) { params.append("cookie", tokenValue); params.append("login_method", "cookie"); }
+                else { params.append("access_token", tokenValue); params.append("login_method", "manual"); }
+                params.append("device_id", feijiCurrentDeviceId || "");
+                const response = await fetch("/?action=feiji_qr_save&" + params.toString());
+                const data = await response.json();
+                if (data.success) { alert("登录信息已保存！"); loadAllLoginStatus(); document.getElementById("feijiManualInput").classList.add("hidden"); document.getElementById("feijiTokenInput").value = ""; }
+                else { alert("保存失败: " + (data.msg || "未知错误")); }
+            } catch (error) { alert("保存失败，请重试"); }
+        }
+        function cancelFeijiQRLogin() {
+            if (feijiQRInterval) clearInterval(feijiQRInterval);
+            if (feijiCountdownInterval) clearInterval(feijiCountdownInterval);
+            document.getElementById("feijiQRCode").classList.add("hidden");
+            document.getElementById("feijiManualInput").classList.add("hidden");
+            const btn = document.getElementById("feijiQRButton");
+            btn.disabled = false; btn.innerHTML = '<i class="fa fa-qrcode"></i> 扫码/手动登录';
+        }
+        // ==================== 蓝奏云优享版账号密码登录 ====================
+        function showIlanzouLogin() {
+            document.getElementById("ilanzouAccountLogin").classList.toggle("hidden");
+        }
+        async function doIlanzouAccountLogin() {
+            const username = document.getElementById("ilanzouUsernameInput").value.trim();
+            const password = document.getElementById("ilanzouPasswordInput").value.trim();
+            const btn = document.getElementById("ilanzouAccountLoginBtn");
+            const status = document.getElementById("ilanzouAccountStatus");
+            if (!username || !password) { status.classList.remove("hidden"); status.className = "text-xs p-2 rounded bg-red-100 text-red-700"; status.textContent = "❌ 请输入邮箱/手机号和密码"; return; }
+            btn.disabled = true; btn.textContent = "⏳ 登录中..."; status.classList.remove("hidden"); status.className = "text-xs p-2 rounded bg-blue-100 text-blue-700"; status.textContent = "🔄 正在连接服务器...";
+            try {
+                const response = await fetch("/?action=ilanzou_login&username=" + encodeURIComponent(username) + "&password=" + encodeURIComponent(password));
+                const data = await response.json();
+                btn.disabled = false; btn.textContent = "🔐 登录并保存";
+                if (data.success) {
+                    status.className = "text-xs p-2 rounded bg-green-100 text-green-700";
+                    status.innerHTML = " " + data.msg;
+                    document.getElementById("ilanzou-login-container").classList.add("hidden");
+                    document.getElementById("ilanzouAccountLogin").classList.add("hidden");
+                    document.getElementById("ilanzouLoginSuccess").classList.remove("hidden");
+                    document.getElementById("ilanzou-login-status").textContent = "已登录: " + maskAccount(data.data.username || username);
+                } else {
+                    status.className = "text-xs p-2 rounded bg-red-100 text-red-700";
+                    status.innerHTML = "❌ " + data.msg;
+                }
+            } catch (error) { btn.disabled = false; btn.textContent = "🔐 登录并保存"; status.classList.remove("hidden"); status.className = "text-xs p-2 rounded bg-red-100 text-red-700"; status.textContent = "❌ 网络错误: " + error.message; }
+        }
+        async function logoutIlanzou() {
+            if (!confirm("确定要退出蓝奏云优享版登录吗？")) return;
+            try {
+                await fetch("/?action=ilanzou_logout");
+                document.getElementById("ilanzouLoginSuccess").classList.add("hidden");
+                document.getElementById("ilanzou-login-container").classList.remove("hidden");
+                document.getElementById("ilanzouAccountLogin").classList.add("hidden");
+                document.getElementById("ilanzou-login-status").textContent = "未登录";
+                document.getElementById("ilanzouUsernameInput").value = "";
+                document.getElementById("ilanzouPasswordInput").value = "";
+                document.getElementById("ilanzouAccountStatus").classList.add("hidden");
+            } catch (e) { alert("退出失败: " + e.message); }
+        }
+        // ==================== 阿里云盘扫码登录 ====================
+        let aliyunQRInterval = null; let aliyunCountdownInterval = null; let aliyunCurrentT = null; let aliyunCurrentCk = null; let aliyunCurrentCsrfToken = null; let aliyunCurrentUmidToken = null; let aliyunLoginDone = false;
+        async function startAliyunQRLoginCard() {
+            aliyunLoginDone = false;
+            const btn = document.getElementById("aliyunQRButtonCard");
+            btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 获取二维码...';
+            try {
+                const response = await fetch("/?action=aliyun_qrcode");
+                const data = await response.json();
+                if (data.success && data.data) {
+                    aliyunCurrentT = data.data.t;
+                    aliyunCurrentCk = data.data.ck;
+                    aliyunCurrentCsrfToken = data.data.csrf_token;
+                    aliyunCurrentUmidToken = data.data.umid_token;
+                    document.getElementById("aliyun-qr-card-container").classList.add("hidden");
+                    document.getElementById("aliyunQRCodeCard").classList.remove("hidden");
+                    document.getElementById("aliyunLoginSuccessCard").classList.add("hidden");
+                    document.getElementById("aliyunQrcodeImageCard").innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(data.data.qr_code_url) + '" alt="QR Code" class="mx-auto">';
+                    startAliyunCountdownCard(600);
+                    startAliyunQRPollCard(data.data.device_id, 3);
+                } else { alert("获取二维码失败: " + (data.msg || "未知错误")); btn.disabled = false; btn.innerHTML = '<i class="fa fa-qrcode"></i> 扫码登录'; }
+            } catch (error) { alert("获取二维码失败，请重试"); btn.disabled = false; btn.innerHTML = '<i class="fa fa-qrcode"></i> 扫码登录'; }
+        }
+        function startAliyunCountdownCard(expiresIn) {
+            let remaining = expiresIn;
+            if (aliyunCountdownInterval) clearInterval(aliyunCountdownInterval);
+            aliyunCountdownInterval = setInterval(() => {
+                remaining--;
+                document.getElementById("aliyunCountdownCard").style.width = (remaining / expiresIn) * 100 + "%";
+                document.getElementById("aliyunCountdownTextCard").textContent = remaining + "s";
+                if (remaining <= 0) { clearInterval(aliyunCountdownInterval); cancelAliyunQRLoginCard(); alert("二维码已过期，请重新获取"); }
+            }, 1000);
+        }
+        function startAliyunQRPollCard(deviceId, interval) {
+            if (aliyunQRInterval) clearInterval(aliyunQRInterval);
+            document.getElementById("aliyunQRStatusCard").textContent = "等待扫码...";
+            aliyunQRInterval = setInterval(async () => {
+                if (aliyunLoginDone) return;
+                try {
+                    const pollParams = new URLSearchParams();
+                    pollParams.append("t", aliyunCurrentT);
+                    pollParams.append("ck", aliyunCurrentCk);
+                    pollParams.append("csrfToken", aliyunCurrentCsrfToken);
+                    pollParams.append("umidToken", aliyunCurrentUmidToken);
+                    const response = await fetch("/?action=aliyun_qr_poll&" + pollParams.toString());
+                    const data = await response.json();
+                    if (data.success && data.data) {
+                        if (data.data.status === "confirmed") {
+                            aliyunLoginDone = true;
+                            clearInterval(aliyunQRInterval); clearInterval(aliyunCountdownInterval);
+                            document.getElementById("aliyunQRStatusCard").innerHTML = '<span class="text-success font-semibold">扫码成功！</span>';
+                            if (data.data.authorization) {
+                                await saveAliyunLogin(data.data.authorization);
+                            } else {
+                                await saveAliyunLogin(null, aliyunCurrentCk, aliyunCurrentLgToken);
+                            }
+                            setTimeout(() => { document.getElementById("aliyunQRCodeCard").classList.add("hidden"); document.getElementById("aliyunLoginSuccessCard").classList.remove("hidden"); loadAllLoginStatus(); }, 1000);
+                            return;
+                        } else if (data.data.status === "scaned") {
+                            document.getElementById("aliyunQRStatusCard").innerHTML = '<span class="text-warning font-semibold">已扫码，等待确认...</span>';
+                        } else if (data.data.status === "expired") {
+                            clearInterval(aliyunQRInterval); clearInterval(aliyunCountdownInterval);
+                            document.getElementById("aliyunQRStatusCard").innerHTML = '<span class="text-danger font-semibold">二维码已过期</span>';
+                            setTimeout(cancelAliyunQRLoginCard, 2000); return;
+                        }
+                    } else if (!data.success) {
+                        console.error("轮询失败:", data.msg);
+                    }
+                } catch (error) { console.error("轮询失败:", error); }
+            }, interval * 1000);
+        }
+        function cancelAliyunQRLoginCard() {
+            if (aliyunQRInterval) { clearInterval(aliyunQRInterval); aliyunQRInterval = null; }
+            if (aliyunCountdownInterval) { clearInterval(aliyunCountdownInterval); aliyunCountdownInterval = null; }
+            aliyunCurrentT = null;
+            aliyunCurrentCk = null;
+            aliyunCurrentCsrfToken = null;
+            aliyunCurrentUmidToken = null;
+            document.getElementById("aliyun-qr-card-container").classList.remove("hidden");
+            document.getElementById("aliyunQRCodeCard").classList.add("hidden");
+            document.getElementById("aliyunLoginSuccessCard").classList.add("hidden");
+            document.getElementById("aliyunQRButtonCard").disabled = false;
+            document.getElementById("aliyunQRButtonCard").innerHTML = '<i class="fa fa-qrcode"></i> 扫码登录';
+            document.getElementById("aliyunQrcodeImageCard").innerHTML = "";
+            document.getElementById("aliyunCountdownCard").style.width = "100%";
+            document.getElementById("aliyunCountdownTextCard").textContent = "600s";
+            document.getElementById("aliyunQRStatusCard").textContent = "等待扫码...";
+        }
+        async function saveAliyunLogin(authorization, ck, lgToken) {
+            try {
+                const params = new URLSearchParams();
+                if (authorization) params.append("authorization", authorization);
+                if (ck) params.append("ck", ck);
+                if (lgToken) params.append("lgToken", lgToken);
+                const response = await fetch("/?action=aliyun_qr_save&" + params.toString());
+                const data = await response.json();
+                if (data.success) {
+                    console.log("阿里云盘登录信息已保存到默认配置");
+                    //  关键修复：同时保存到前端内存，确保后续解析请求能传递auth参数
+                    if (!window.memoryConfig) window.memoryConfig = {};
+                    if (!window.memoryConfig.aliyun) window.memoryConfig.aliyun = {};
+                    if (authorization) {
+                        window.memoryConfig.aliyun.authorization = authorization;
+                        console.log("[阿里云盘] Authorization已保存到前端内存, 长度:", authorization.length);
+                    }
+                } else {
+                    console.error("保存登录信息失败:", data.msg);
+                }
+            } catch (error) { console.error("保存登录信息失败:", error); }
+        }
+        function toggleAliyunManualInput() {
+            const el = document.getElementById("aliyun-manual-input-card");
+            el.classList.toggle("hidden");
+        }
+        async function saveAliyunManualLogin() {
+            const auth = document.getElementById("aliyunAuthCard").value.trim();
+            if (!auth) { alert("请输入Authorization"); return; }
+            try {
+                const response = await fetch("/?action=aliyun_qr_save&authorization=" + encodeURIComponent(auth));
+                const data = await response.json();
+                if (data.success) {
+                    alert("保存成功！");
+                    //  同时保存到前端内存
+                    if (!window.memoryConfig) window.memoryConfig = {};
+                    if (!window.memoryConfig.aliyun) window.memoryConfig.aliyun = {};
+                    window.memoryConfig.aliyun.authorization = auth;
+                    loadAllLoginStatus();
+                    document.getElementById("aliyun-manual-input-card").classList.add("hidden");
+                    document.getElementById("aliyunAuthCard").value = "";
+                }
+                else { alert("保存失败: " + (data.msg || "未知错误")); }
+            } catch (error) { alert("保存失败，请重试"); }
+        }
+        // ==================== UC网盘扫码登录 ====================
+        let ucQRInterval = null; let ucCountdownInterval = null; let ucCurrentToken = null;
+        async function startUCQRLogin() {
+            const btn = document.getElementById("ucQRButton");
+            btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 获取二维码...';
+            try {
+                const resp = await fetch("/?action=uc_qrcode"); const data = await resp.json();
+                if (data.success && data.data) {
+                    ucCurrentToken = data.data.token;
+                    document.getElementById("uc-qr-container").classList.add("hidden");
+                    document.getElementById("ucQRCode").classList.remove("hidden");
+                    document.getElementById("ucLoginSuccess").classList.add("hidden");
+                    document.getElementById("ucQrcodeImage").innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(data.data.qr_url) + '" alt="QR" class="mx-auto">';
+                    startGenericCountdown("ucCountdown", "ucCountdownText", data.data.expires_in || 600, function() { cancelUCQRLogin(); alert("二维码已过期"); });
+                    ucQRInterval = setInterval(async () => {
+                        try {
+                            const r = await fetch("/?action=uc_qr_poll&token=" + ucCurrentToken); const d = await r.json();
+                            if (d.success && d.data) {
+                                if (d.data.status === "confirmed") {
+                                    clearInterval(ucQRInterval); clearInterval(ucCountdownInterval);
+                                    document.getElementById("ucQRStatus").innerHTML = '<span class="text-success font-semibold">扫码成功！</span>';
+                                    await fetch("/?action=uc_qr_save&cookie=" + encodeURIComponent("ticket=" + d.data.ticket));
+                                    setTimeout(() => { document.getElementById("ucQRCode").classList.add("hidden"); document.getElementById("ucLoginSuccess").classList.remove("hidden"); loadAllLoginStatus(); }, 1000);
+                                } else if (d.data.status === "expired") {
+                                    clearInterval(ucQRInterval); clearInterval(ucCountdownInterval); document.getElementById("ucQRStatus").innerHTML = '<span class="text-danger font-semibold">已过期</span>'; setTimeout(cancelUCQRLogin, 2000);
+                                } else { document.getElementById("ucQRStatus").textContent = d.data.status === "scanned" ? "已扫码，等待确认..." : "等待扫码..."; }
+                            }
+                        } catch (e) { console.error("UC轮询失败:", e); }
+                    }, (data.data.interval || 3) * 1000);
+                } else { alert("获取二维码失败: " + (data.msg || "未知错误")); btn.disabled = false; btn.innerHTML = '<i class="fa fa-qrcode"></i> 扫码登录'; }
+            } catch (e) { alert("获取二维码失败"); btn.disabled = false; btn.innerHTML = '<i class="fa fa-qrcode"></i> 扫码登录'; }
+        }
+        function cancelUCQRLogin() {
+            if (ucQRInterval) { clearInterval(ucQRInterval); ucQRInterval = null; } if (ucCountdownInterval) { clearInterval(ucCountdownInterval); ucCountdownInterval = null; } ucCurrentToken = null;
+            document.getElementById("uc-qr-container").classList.remove("hidden"); document.getElementById("ucQRCode").classList.add("hidden"); document.getElementById("ucLoginSuccess").classList.add("hidden");
+            document.getElementById("ucQRButton").disabled = false; document.getElementById("ucQRButton").innerHTML = '<i class="fa fa-qrcode"></i> 扫码登录';
+            document.getElementById("ucQrcodeImage").innerHTML = ""; document.getElementById("ucCountdown").style.width = "100%"; document.getElementById("ucCountdownText").textContent = "600s"; document.getElementById("ucQRStatus").textContent = "等待扫码...";
+        }
+        async function saveUCManualLogin() {
+            const cookie = document.getElementById("ucCookieInput").value.trim(); if (!cookie) { alert("请输入Cookie"); return; }
+            try { const r = await fetch("/?action=uc_qr_save&cookie=" + encodeURIComponent(cookie)); const d = await r.json(); if (d.success) { alert("保存成功！"); if (!window.memoryConfig) window.memoryConfig = {}; if (!window.memoryConfig.uc) window.memoryConfig.uc = {}; window.memoryConfig.uc.cookie = cookie; loadAllLoginStatus(); document.getElementById("uc-manual-input").classList.add("hidden"); document.getElementById("ucCookieInput").value = ""; } else { alert("保存失败: " + d.msg); } } catch (e) { alert("保存失败"); }
+        }
+        // ==================== 夸克网盘扫码登录 ====================
+        let quarkQRInterval = null; let quarkCountdownInterval = null; let quarkCurrentToken = null;
+        async function startQuarkQRLogin() {
+            const btn = document.getElementById("quarkQRButton");
+            btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 获取二维码...';
+            try {
+                const resp = await fetch("/?action=quark_qrcode"); const data = await resp.json();
+                if (data.success && data.data) {
+                    quarkCurrentToken = data.data.token;
+                    document.getElementById("quark-qr-container").classList.add("hidden");
+                    document.getElementById("quarkQRCode").classList.remove("hidden");
+                    document.getElementById("quarkLoginSuccess").classList.add("hidden");
+                    document.getElementById("quarkQrcodeImage").innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(data.data.qr_url) + '" alt="QR" class="mx-auto">';
+                    startGenericCountdown("quarkCountdown", "quarkCountdownText", data.data.expires_in || 600, function() { cancelQuarkQRLogin(); alert("二维码已过期"); });
+                    quarkQRInterval = setInterval(async () => {
+                        try {
+                            const r = await fetch("/?action=quark_qr_poll&token=" + quarkCurrentToken); const d = await r.json();
+                            if (d.success && d.data) {
+                                if (d.data.status === "confirmed") {
+                                    clearInterval(quarkQRInterval); clearInterval(quarkCountdownInterval);
+                                    document.getElementById("quarkQRStatus").innerHTML = '<span class="text-success font-semibold">扫码成功！</span>';
+                                    const cookieToSave = d.data.cookie || ("ticket=" + d.data.ticket);
+                                    await fetch("/?action=quark_qr_save&cookie=" + encodeURIComponent(cookieToSave));
+                                    //  关键修复：同时保存到前端内存，确保后续解析请求能传递quark_cookie参数
+                                    if (!window.memoryConfig) window.memoryConfig = {};
+                                    if (!window.memoryConfig.quark) window.memoryConfig.quark = {};
+                                    window.memoryConfig.quark.cookie = cookieToSave;
+                                    console.log("[夸克网盘] Cookie已保存到前端内存, 长度:", cookieToSave.length);
+                                    setTimeout(() => { document.getElementById("quarkQRCode").classList.add("hidden"); document.getElementById("quarkLoginSuccess").classList.remove("hidden"); loadAllLoginStatus(); }, 1000);
+                                } else if (d.data.status === "expired") {
+                                    clearInterval(quarkQRInterval); clearInterval(quarkCountdownInterval); document.getElementById("quarkQRStatus").innerHTML = '<span class="text-danger font-semibold">已过期</span>'; setTimeout(cancelQuarkQRLogin, 2000);
+                                } else { document.getElementById("quarkQRStatus").textContent = "等待扫码..."; }
+                            }
+                        } catch (e) { console.error("夸克轮询失败:", e); }
+                    }, (data.data.interval || 3) * 1000);
+                } else { alert("获取二维码失败: " + (data.msg || "未知错误")); btn.disabled = false; btn.innerHTML = '<i class="fa fa-qrcode"></i> 扫码登录'; }
+            } catch (e) { alert("获取二维码失败"); btn.disabled = false; btn.innerHTML = '<i class="fa fa-qrcode"></i> 扫码登录'; }
+        }
+        function cancelQuarkQRLogin() {
+            if (quarkQRInterval) { clearInterval(quarkQRInterval); quarkQRInterval = null; } if (quarkCountdownInterval) { clearInterval(quarkCountdownInterval); quarkCountdownInterval = null; } quarkCurrentToken = null;
+            document.getElementById("quark-qr-container").classList.remove("hidden"); document.getElementById("quarkQRCode").classList.add("hidden"); document.getElementById("quarkLoginSuccess").classList.add("hidden");
+            document.getElementById("quarkQRButton").disabled = false; document.getElementById("quarkQRButton").innerHTML = '<i class="fa fa-qrcode"></i> 扫码登录';
+            document.getElementById("quarkQrcodeImage").innerHTML = ""; document.getElementById("quarkCountdown").style.width = "100%"; document.getElementById("quarkCountdownText").textContent = "600s"; document.getElementById("quarkQRStatus").textContent = "等待扫码...";
+        }
+        async function saveQuarkManualLogin() {
+            const cookie = document.getElementById("quarkCookieInput").value.trim(); if (!cookie) { alert("请输入Cookie"); return; }
+            try { const r = await fetch("/?action=quark_qr_save&cookie=" + encodeURIComponent(cookie)); const d = await r.json(); if (d.success) { alert("保存成功！"); if (!window.memoryConfig) window.memoryConfig = {}; if (!window.memoryConfig.quark) window.memoryConfig.quark = {}; window.memoryConfig.quark.cookie = cookie; loadAllLoginStatus(); document.getElementById("quark-manual-input").classList.add("hidden"); document.getElementById("quarkCookieInput").value = ""; } else { alert("保存失败: " + d.msg); } } catch (e) { alert("保存失败"); }
+        }
+        // ==================== 移动云盘（暂未实现） ====================
+        async function saveMCloudManualLogin() {
+            const auth = document.getElementById("mcloudAuthInput").value.trim();
+            if (!auth) { alert("请输入Authorization"); return; }
+            try {
+                const r = await fetch("/?action=mcloud_qr_save&authorization=" + encodeURIComponent(auth));
+                const d = await r.json();
+                if (d.success) {
+                    alert("保存成功！");
+                    //  同时保存到前端内存，确保后续解析请求能传递auth参数
+                    if (!window.memoryConfig) window.memoryConfig = {};
+                    if (!window.memoryConfig.mcloud) window.memoryConfig.mcloud = {};
+                    window.memoryConfig.mcloud.authorization = auth;
+                    loadAllLoginStatus();
+                    document.getElementById("mcloud-manual-input").classList.add("hidden");
+                } else {
+                    alert("保存失败: " + d.msg);
+                }
+            } catch (e) {
+                alert("保存失败");
+            }
+        }
+        // ==================== 123云盘手动保存Token ====================
+        async function savePan123ManualLogin() {
+            const token = document.getElementById("pan123TokenInput").value.trim();
+            if (!token) { alert("请输入Token"); return; }
+            //  验证JWT格式（xxx.yyy.zzz）
+            if (token.split(".").length !== 3 || token.startsWith("http")) {
+                alert("Token格式不正确，请输入JWT格式的Token（xxx.yyy.zzz）");
+                return;
+            }
+            try {
+                const r = await fetch("/?action=pan123_manual_save&token=" + encodeURIComponent(token));
+                const d = await r.json();
+                if (d.success) {
+                    alert("保存成功！Token已保存到D1数据库");
+                    if (!window.memoryConfig) window.memoryConfig = {};
+                    if (!window.memoryConfig.pan123) window.memoryConfig.pan123 = {};
+                    window.memoryConfig.pan123.authorization = token;
+                    loadAllLoginStatus();
+                    document.getElementById("pan123-manual-input").classList.add("hidden");
+                } else {
+                    alert("保存失败: " + d.msg);
+                }
+            } catch (e) {
+                alert("保存失败: " + e.message);
+            }
+        }
+        // ==================== 通用倒计时函数 ====================
+        function startGenericCountdown(barId, textId, expiresIn, onExpire) {
+            let remaining = expiresIn;
+            const intervalId = setInterval(() => {
+                remaining--;
+                document.getElementById(barId).style.width = (remaining / expiresIn) * 100 + "%";
+                document.getElementById(textId).textContent = remaining + "s";
+                if (remaining <= 0) { clearInterval(intervalId); if (onExpire) onExpire(); }
+            }, 1000);
+            if (barId.startsWith("uc")) ucCountdownInterval = intervalId;
+            else if (barId.startsWith("quark")) quarkCountdownInterval = intervalId;
+            else if (barId.startsWith("mcloud")) mcloudCountdownInterval = intervalId;
+        }
+        function logout() { if (confirm("确定要退出登录吗？")) window.location.href = "/admin?action=logout"; }
+        setInterval(loadStats, 30000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+The HTML/CSS/JavaScript pages in web/ originate from JxPan by ByLsPro (LsPro).
+Upstream: https://github.com/ByLsPro/JxPan
+Their upstream Apache License 2.0 is preserved in LICENSES/JxPan-Apache-2.0.txt.
+
+The imported pages are byte-for-byte copies of the current deployed home/login
+responses and the deployed admin renderer output. Source hashes and import
+provenance are recorded in web/baseline.json. This notice does not grant a new
+license to the original Rust code or change the upstream page license.

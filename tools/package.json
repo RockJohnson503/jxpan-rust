@@ -1,0 +1,9 @@
+{
+  "name": "jxpan-baseline-tools",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "acorn": "8.18.0",
+    "astring": "1.9.0"
+  }
+}

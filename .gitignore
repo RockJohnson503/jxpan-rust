@@ -1,0 +1,12 @@
+/tools/node_modules/
+/target/
+/.env
+/.env.*
+!/.env.example
+/.dev.vars
+/data/
+/tests/private/
+/.scratch/
+__pycache__/
+*.py[cod]
+.DS_Store
