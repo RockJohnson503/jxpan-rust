@@ -1,17 +1,32 @@
-# 天翼云盘：当前部署协议与离线兼容基础
+# 天翼云盘：当前实现与冻结协议依据
 
 ## 1. 基线、范围与证据
 
-唯一研究基线为本次导出/解码的当前部署，不使用历史副本：
+原版兼容基线为本次导出/解码的部署源码，不使用未经核验的历史副本；2026-10-15 另核对的开源实现与真实分享修复证据见 [CLOUD189_SHARE_REGRESSION](CLOUD189_SHARE_REGRESSION.md)：
 
 - `.scratch/baseline/_worker.js` SHA-256：`47e2a84566ffa338a420113818a4bb629d3a43f4290dd65547c52b4cfe23f118`，对应 `manifest.json:18`。
 - `.scratch/baseline/Cloud189Parser.js`（完整 1777 行）SHA-256：`29689a2973e07b11e27280ef3eaec0a4653d73267e81f9d15faf2bedccff46b2`。
 - `.scratch/baseline/readable.js`：包含同一完整类、按需续期函数、目录树与播放快路径。
 - `.scratch/baseline/handleMainRequest.js`：当前路由与认证状态机。
 
-本文是**部署客户端行为**，不是官方服务端协议保证。源码中写“成功/已证明无效”的日志不是本次联网验证结果。未读取账号秘密、未登录、未保存/转存/删除，未联网。
+本文中的冻结研究记录**部署 JS 客户端行为**，不是官方服务端协议保证；其“当前部署/当前类”均指冻结 JS。最初研究未联网/执行写操作；2026-10-15 的开源核对、只读供应商诊断与仅 8789 更新独立记录，不混写为最初纯文档研究。
 
-本阶段只新增纯函数与离线差分测试，**未接入服务路由、未实现 HTTP provider**。
+现有 HTTP provider、service、授权及路由已接入。本轮工作区实现见下节与 [STATUS](STATUS.md)、[PARSE_SETTINGS](PARSE_SETTINGS.md)；下方第 3–7 节保留旧 JS 的协议/缺陷证据，不能当作当前 Rust 的行为清单。公共 owned 回退的安全差异见 [CLOUD189_PUBLIC_DOWNLOAD_SECURITY](CLOUD189_PUBLIC_DOWNLOAD_SECURITY.md)，folder-item 修复见 [cloud189-actions-index](cloud189-actions-index.md)。
+
+### 当前 Rust：正式部署、完整性与认证边界
+
+- 2026-10-15 Rust 已正式接管 8788，沿用同一不可变 image ID，当前标签 `jxpan-rust:release-f7496a9c10e0`，部署、独立 final audit 与精确临时文件清理已核验。Git 提交推送按独立步骤核验，结果以 Git 历史/回执为准；身份、原子目录迁移、数据库保护与审计回执见 [TEST_DEPLOYMENT](TEST_DEPLOYMENT.md)。下文 `test-3d1cee097916` 的 40 分享结果为历史窗口，不是当前运行版本。
+- 后台设置接受 1–16 整数，代码默认 16，已有合法保存值优先；无 TTL，缺键不写 KV。2026-10-15 历史只读审计观察保存并发 **16**，本次正式交接全部表/保护 KV 一致，未写设置；有效值按已验证构造逻辑推断，非授权 endpoint 新观测。10-14 保存 4 仅为历史观察。历史探针固定并发 4 控制负载，不改线上设置；默认选择仅基于移动样本，不能宣称全供应商最优。
+- 天翼与移动公开分享客户端共用 send 前至完整响应 body 的动态预算；auth 刷新/QR 客户端不在预算内。每次 walk 固定并发快照，用 FuturesUnordered 滚动补位，旧 6 并发/400 节点仅保留为历史 oracle 语义。
+- 列表每页 200、最多 100 页、单目录累计 4 MiB 估算 / 20k items，单响应 2 MiB。第一页可按既定 API/mode 降级，某路线成功后固定路线完成后续分页；后页失败不混另一 API 的页、不返回部分成功。真实大分页尚未实机验证。
+- 完整 walk 上限 10k 目录（含根）/ 20k entries / 8 MiB 保留估算 / 96 层；任一先触发即错误，不截断成功。上游错误、循环、全局重复 ID/跨父目录重复、畸形 metadata 也拒绝，不伪装空目录。
+- 未知文件 size=null，真实 0 字节有效且不据此判目录，JS 不安全大整数用字符串；类型显式判断，重名投影保证唯一不覆盖。目录 guard 索引取同次原始 Walk，不从名称树反推。
+- 对受保护/未知状态分享，非空提取码仍先校验并捕获 cookie；首次无 metadata 时使用 cookie 重取，fast 即使有 sid 也不绕过。仅明确 `needAccessCode:false`（含已实测的 mode=2 / 非空 shareId / 显式空 accessCode 形状）跳过无关提取码。密码失败受控 403，不继续下载；回归不代表真实上游一定返回 cookie。
+- **folder-item 旧 missing-idMap 断链已修复**：请求目录为 walk 根，在该子树内找真实文件/目录，目录返回对应子树、文件走公开下载，不存在 404；不会改成全分享查找。parse_file 使用上游 metadata，不信 caller 的 name/size，目录拒绝，不再追加 filename 破坏签名 URL。
+- 公共普通/file action 仅 **Open → AppShared（dt=1 + shareId）**，fast 为 **AppShared → Open**；禁止 owned dt=3、转存、删除。移除 Range 一跳探测，直接供应商 URL 302，服务端不拉文件/视频正文。
+- 2026-10-15 `test-3d1cee097916` 历史窗口修复 metadata/shareMode、目录 size 占位值、Open 网络签名固定 32 位 MD5 与错误分类。40 个不同分享 / 44 个生产逻辑样例有 19 个不同完整目录树、最大 432 目录 / 3357 唯一文件；当时 20 次 fast 和 7 个单文件认证拒绝、下载地址为 0，未登录/刷新/替换 session，也无 CDN/云盘写入。此为当时阻塞，不代表当前完全不能取址，详见 [真实回归](CLOUD189_SHARE_REGRESSION.md)。
+- **后续 S005/S006 目录内文件取址从 400 恢复为 302，已验证。** 302 只证明取得直链，不证明 CDN 正文/播放、目录 ZIP 或完整下载矩阵通过。当前受管账号解析/取址强制按需续期，无 `JXPAN_AUTH_REFRESH` 关闭开关、无后台定时保活；初始化/状态读取不请求供应商，真人扫码与真实长期续期仍未验收。`verify-live.py` 须显式 `--allow-provider-side-effects` 且先获授权；`verify-pages.py` 默认 synthetic、无 provider。
+- 刷新 Err 不保留 ready cache；管理员 session 尚未绑定当前配置版本，旧 DB 权限不自动强改以保护线上状态。完整性修复不是全部审查项完成；天翼真实大分页、真实续期/扫码、CDN、长期尾延迟/错误率与 CPU/RSS 均仍有独立门禁。
 
 ## 2. 已实现 API 与依赖
 
@@ -23,14 +38,14 @@
 | `md5(&str) -> String` | UTF-8 MD5，小写，固定 32 位 |
 | `java_md5(&str) -> String` | MD5 转正 BigInt 后输出十六进制，**去掉前导零**，不是固定 32 位 |
 | `hmac_sha1(key, message) -> Result<String, SignatureError>` | UTF-8 HMAC-SHA1，小写 40 位；空 key 与原 WebCrypto 一样拒绝 |
-| `open_download_signing_text` | Open API 下载原文，交给 `java_md5` |
-| `open_list_signing_text` | Open API 列目录原文，交给 `java_md5` |
+| `open_download_signing_text` | Open API 下载原文；历史 JS 交给 `java_md5`，当前 HTTP 使用固定 32 位 `md5` |
+| `open_list_signing_text` | Open API 列目录原文；历史 JS 交给 `java_md5`，当前 HTTP 使用固定 32 位 `md5` |
 | `app_signing_text` | App 方法/路径/Date 原文，交给 `hmac_sha1` |
 | `web_signing_text` | Web portal appkey + timestamp + sign-type，交给固定宽度 `md5` |
 
 必要依赖（由主 agent 添加，不在本任务内修改 Cargo）：`md-5 = 0.10`、`sha1 = 0.10`、`hmac = 0.12`、`regex = 1`、`url = 2`。测试需要 `serde_json = 1`（可放 dev-dependencies）；本模块不需要直接 `serde` 依赖。没有 HTTP、时钟、随机数、存储或日志依赖。调用者显式传入时间/Date，避免偷偷改签名。
 
-`tests/cloud189_vectors.rs` 使用 `#[path]` 引入独立模块，不要求修改 `src/providers/mod.rs`。主 agent 决定后续导出方式。
+纯函数测试的独立 module seam 不等于生产未导出；`src/providers/mod.rs` 已注册 cloud189 及其 client/service/auth 等模块。实现约束及根测试状态以当前源代码和 [STATUS](STATUS.md) 为准。
 
 ## 3. 链接识别完整行为
 
@@ -91,7 +106,7 @@ headers 为 `Date/SessionKey/Signature`、`user-agent: desktop`、随机 `X-Requ
 
 headers `appkey=600100422/sign-type=1/signature/timestamp`，另带 `COOKIE_LOGIN_USER`，可加 `SSON`。原文没有账号 Cookie 或请求参数。Web 使用 `md5`，不是去前导零的 `javaMd5`。
 
-## 5. Cloud189Parser 全方法/协议矩阵
+## 5. 冻结 Cloud189Parser 全方法/协议矩阵（非当前 Rust）
 
 下表覆盖完整类，不代表这些网络功能已在 Rust 实现。默认 GET，除非另写 POST。`A=https://api.cloud.189.cn`，`W=https://cloud.189.cn/api`，`E=https://open.e.189.cn`。
 
@@ -134,7 +149,7 @@ headers `appkey=600100422/sign-type=1/signature/timestamp`，另带 `COOKIE_LOGI
 | browseFolderInteractive:1660 | **当前全树** jxpanWalkDirTree concurrency=6/maxNodes=400；根 shareInfo.fileId；缓存 c189tree:shareId|password 600000ms | 输出 `{code:200,shareKey:'c189:'+shareId,data:{tree,sid}}`，无旧版 idMap/_shareInfo/_password；找不到节点 code400；截断/失败节点不等于完整分页结果 |
 | resolveItemInFolder:1695 | 仍读取旧 `_shareInfo/idMap/_folderTreeCache` 格式 | 新全树不含 idMap，通常先 404；文件 token 循环没设置 openAccessToken；把 currentToken 当 getDownloadUrlByOpenAPI 第三参 retried，非 token；saveAndDownload 的 shareId/fileId 顺序反了；失败仍 code200/success=false |
 
-## 6. parse 与下载快路径的实际差异（当前补丁重点）
+## 6. 冻结 JS：parse 与下载快路径的实际差异
 
 ### 常规 parse
 
@@ -164,13 +179,13 @@ headers `appkey=600100422/sign-type=1/signature/timestamp`，另带 `COOKIE_LOGI
 
 `readable.js:11894-11966`：type=down 强制 shouldRedirect，type=json 禁用，否则使用配置；只有 code200 + data.download_url 且非 folder/directory/list 才跳。Cloud189 直接 HTTP302 到 URL，不代理；并不做快路径 Range 探测。认证/文件 action 通常直接返回 JSON，不走此 handleResponse。
 
-### 当前目录 action 的格式不一致
+### 冻结旧目录 action 的格式不一致（当前 Rust 已修复）
 
 `handleMainRequest.js:1437-1581` 的 parse_cloud189_folder_item：必须 share_id+target_file_id；D1 或 CLOUD189_TOKEN 装载；可重验 pwd（失败只日志），可获取 Open token。无 folder_id 直接 browse；有 folder_id 则 browse 再 resolveItemInFolder，后者还依赖旧 idMap，和当前 `{tree,sid}` 输出不匹配。
 
 `handleMainRequest.js:1614-1766` 的 parse_cloud189_file：前端 c189_token → D1 → CLOUD189_TOKEN；ensureCookie/可重验 pwd/可取 Open token，然后 **Open → App → 转存**，不同于 parse。其转存调用 `saveAndDownload(fileId,shareId,fileName)` 参数倒置。可追加 filename，输出 camelCase `downloadUrl` 的 JSON。这些遗留路径不能作为正确 Rust 协议设计照抄，必须单独覆盖。
 
-## 7. 认证路由完整状态机
+## 7. 冻结 JS：认证路由完整状态机
 
 ### 二维码初始化：真实逐跳 Cookie
 
@@ -232,6 +247,6 @@ node tools/cloud189-vectors.mjs         # 输出仅合成的离线 JSON 向量
 cargo test --test cloud189_vectors     # 主 agent 添加依赖后运行 Rust/Node 差分
 ```
 
-本子任务已运行 Node oracle：SHA 正确、类 SHA 正确，49/135/5/6/6 数量正确。**Rust 对比测试文件已实现，cargo 编译/执行由主 agent 整合运行；在它实际通过前，不声称 Rust 差分完成。** 原文拼接已覆盖 GET 下载/列目录与 Web；删除 POST 的原方法禁止执行，因此没有执行 POST 删除格式差分。任意方法字符串原样拼接的纯函数不等于已实现删除。
+最初子任务已核对 Node oracle SHA 与 49/135/5/6/6 数量；当前 Rust 已接入根 crate，具体最新执行结果以 [STATUS](STATUS.md) 为准，不能用最初“待整合”描述生产接线，也不能把本文的复现命令当作本轮通过报告。原文拼接覆盖 GET 下载/目录与 Web；未执行删除 POST 原方法，不等于实现或授权删除。
 
-未实现：网络客户端、账户/扫码/续期、Cookie jar、提取码校验、文件信息转换、目录列表/分页/全树/cache、下载降级、转存/删除、播放探测/302、参数校验与安全域白名单、HTTP路由/部署。未做上游联网验签或真实账号验证。源码中的 format mismatch/参数倒置/日志泄密均记录为集成风险，本任务不修改共享 JS 或 Rust 主路由。
+网络客户端、账户/扫码/续期、Cookie、提取码、完整树与分页、公共下载降级及 HTTP 接线均已有实现，不再列为“尚未实现”。历史已有 40 个分享的生产逻辑回归，后续 S005/S006 目录内文件取得 302；8788 正式迁移已验收。天翼真实 >200 同级分页、完整分享/认证/action/下载矩阵、真人扫码/长期续期、CDN、长期性能及线上回滚演练仍未完成。转存/删除不在公共解析范围，真实副作用验收独立且默认关闭；冻结错误、参数倒置和日志泄密仍为历史证据，修复差异独立测试，不修改 oracle 假称完全兼容。

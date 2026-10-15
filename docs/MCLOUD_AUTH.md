@@ -33,4 +33,31 @@ Oracle 先检查部署和 readable.js 的固定 SHA-256，仅抽取并执行**�
 向量 JSON 内容 SHA-256（不含结尾换行）：
 `ae6d87e153670e3ee9d3c9a0a08d8a2868b11399562a587b7a2e94c720d3aa64`。
 
-该验证是内核离线兼容证据，不代表真实扫码、后台路由或生产凭据续期已经接通。
+## 当前官网 QR 入口（2026-10-15）
+
+冻结内核仍保留给离线 oracle。生产 `src/auth.rs` 已独立接入以下入口；不把旧 fixture 通过当作真实登录有效证据，也不全局修改分享解析器的兼容签名。
+
+- `web_key_request` / `web_key` / `finish_web_key`：当前 web 7.18.1、client 10701，数字 `type:1`，标准 MD5 签名；严格检查公钥响应并使用标准 SPKI DER 解码。失败不发布 QR、不保留旧 skey。公钥 bootstrap **不能携带 `hcy-cool-flag`**；此头会让网关按 CBC 处理请求，而 bootstrap 发送的是明文 JSON。
+- `mcloud_auth_rsa::parse_web_public_key`：完整 ASN.1 TLV、rsaEncryption OID、BIT STRING、正 INTEGER、模数与指数边界和资源上限检查。旧 `parse_deployed_public_key` 不修改。
+- `web_poll_request`：官网 QR `type=5` 实际分流到 `user-njs.yun.139.com/user/thirdlogin`，不是旧 `permission/login`。同一 session 的 SID 同时用于 QR 与 `dycpwd`；固定 web client 的 `pintype=21`、SHA1 secinfo。按明文 JSON 标准签名后，以官网公开协议密钥 AES-256-CBC/PKCS7 封装，携带 `hcy-cool-flag:1`；每次请求独立真实随机 IV。绝不发送现有账号 Authorization/Cookie。
+- `web_poll_response_text`：有界解开 outer CBC 与 data 内 hex AES-128-ECB；只接受明确的 root code / `data.result.resultCode` 和准确的 `data.account/token`。known waiting / scanned / expired 才分类；未知错误、数值成功码、冲突代码、畸形确认不伪装 waiting。不递归搜寻 token，账号不接受星号遮罩/空白/冒号，token 内冒号保留。
+- `AuthManager`：300 秒、128 sessions、provider 隔离、单 session poll single-flight、epoch 防旧 QR 复活；确认先保存 SQLite 再 hot-swap。后台响应仅返回状态，不泄露 Authorization、token、手机号或 raw upstream error。真实登录状态仅由用户手机确认后更新。
+
+### 已核实主源
+
+官网公开 JS（本轮 GET 与匿名 bootstrap 核对）：
+- `https://yun.139.com/w/static/js/app.56b4a805.js`：模块 `7ded`（type 分流）、`e34a`（thirdlogin 明文与解密）、`1690` / `7249`（端点）、`4279`（sign/encryption interceptor）、`4f52`（标准签名/secinfo）、`b441`（web 7.18.1）。
+- `https://yun.139.com/w/static/js/chunk-5111af4d.5adeb027.js`：`createLoginQrcode`、`queryQrcLoginResult`，QR SID/device 关联及 scanned/expired/cancelled。
+
+GitHub 原始实现交叉参考，固定 commit 而非随时变化的默认分支：
+- `odomu/MoviePilot-Plugins`，commit `df09e93b4f1f0fc3bf4c718ccc6c1795bffbaa2a`，`plugins.v2/cloudsubscribe/drive/yun139/client.py` 的 `create_qrcode_login`、`check_qrcode_login`；用于 web QR 协议互证，不把其宽松 default-waiting/递归找凭据复制进生产。
+- `suhuli/cmcc`，commit `f5cc9fb3632aee1912d24894ba20972e4e691d0f`，`src/server/crypto.ts`；仅参考加密/标准签名，未移植其短信或不同 client 参数。
+
+### 本轮验证与边界
+
+- `tests/mcloud_auth_web.rs`：14 项独立 synthetic 测试；保留冻结 fixtures。固定 CBC/ECB 与标准 sign 向量由独立 Node `node:crypto` 生成，覆盖 PKCS7、失败关闭、密钥解析、资源上限与双 session 隔离。
+- `tests/auth.rs`：36 项内存网络/SQLite 测试，包含 raw/encrypted 确认、waiting → scanned → confirmed、落库与重建、失败保留旧凭据、精确 TTL、网络中到期、登出/切账号、在途确认与并发只写一次。
+- 本地匿名网络探针已实际取得合法 public key，并两次返回 HTTP 200 / waiting；全新随机 SID，未向用户展示二维码、未扫码/确认、未加载现有凭据，内存 DB 的 credential writes 为 0。
+- 发布与目标机真实只读回归证据保留在 `.scratch/cloud189-download-qr-8789/` 的独占 JSON 回执；不存在的回执代表未执行，不能以本段文档代替执行结果。
+
+最终真人验收仍需用户在 **8789** 后台新获码并手机确认：waiting → scanned → confirmed，状态显示已登录，并在后续使用中验证授权可用。合成确认测试不是实际扫码成功；匿名 waiting 不是账号授权成功；本轮不代用户扫码、刷新、替换或清空任何真实账号。日志/回执不得保存完整 QR、SID、session key、手机号、token、Authorization 或私有下载 URL。

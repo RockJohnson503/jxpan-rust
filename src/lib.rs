@@ -1,6 +1,11 @@
+pub mod admin;
+pub mod auth;
 pub mod cache;
 pub mod compat;
 pub mod http;
 pub mod providers;
+pub mod records;
+pub mod settings;
+pub mod shortlinks;
 pub mod storage;
 pub mod tree;

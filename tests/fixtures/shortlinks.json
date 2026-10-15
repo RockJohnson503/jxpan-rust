@@ -1,0 +1,1013 @@
+{
+  "source_sha256": "47e2a84566ffa338a420113818a4bb629d3a43f4290dd65547c52b4cfe23f118",
+  "function_sha256": "077710a49c9f914d8f91ae02887371489ab0f8eb223e6945b60d5fd8dd4bbd94",
+  "provenance": "acorn/astring frozen declarations and complete fetch in network-free VM; MockDB + synthetic inputs",
+  "generator": [
+    {
+      "index": 0,
+      "code": "AAAAAA"
+    },
+    {
+      "index": 1,
+      "code": "BBBBBB"
+    },
+    {
+      "index": 2,
+      "code": "CCCCCC"
+    },
+    {
+      "index": 3,
+      "code": "DDDDDD"
+    },
+    {
+      "index": 4,
+      "code": "EEEEEE"
+    },
+    {
+      "index": 5,
+      "code": "FFFFFF"
+    },
+    {
+      "index": 6,
+      "code": "GGGGGG"
+    },
+    {
+      "index": 7,
+      "code": "HHHHHH"
+    },
+    {
+      "index": 8,
+      "code": "IIIIII"
+    },
+    {
+      "index": 9,
+      "code": "JJJJJJ"
+    },
+    {
+      "index": 10,
+      "code": "KKKKKK"
+    },
+    {
+      "index": 11,
+      "code": "LLLLLL"
+    },
+    {
+      "index": 12,
+      "code": "MMMMMM"
+    },
+    {
+      "index": 13,
+      "code": "NNNNNN"
+    },
+    {
+      "index": 14,
+      "code": "OOOOOO"
+    },
+    {
+      "index": 15,
+      "code": "PPPPPP"
+    },
+    {
+      "index": 16,
+      "code": "QQQQQQ"
+    },
+    {
+      "index": 17,
+      "code": "RRRRRR"
+    },
+    {
+      "index": 18,
+      "code": "SSSSSS"
+    },
+    {
+      "index": 19,
+      "code": "TTTTTT"
+    },
+    {
+      "index": 20,
+      "code": "UUUUUU"
+    },
+    {
+      "index": 21,
+      "code": "VVVVVV"
+    },
+    {
+      "index": 22,
+      "code": "WWWWWW"
+    },
+    {
+      "index": 23,
+      "code": "XXXXXX"
+    },
+    {
+      "index": 24,
+      "code": "YYYYYY"
+    },
+    {
+      "index": 25,
+      "code": "ZZZZZZ"
+    },
+    {
+      "index": 26,
+      "code": "aaaaaa"
+    },
+    {
+      "index": 27,
+      "code": "bbbbbb"
+    },
+    {
+      "index": 28,
+      "code": "cccccc"
+    },
+    {
+      "index": 29,
+      "code": "dddddd"
+    },
+    {
+      "index": 30,
+      "code": "eeeeee"
+    },
+    {
+      "index": 31,
+      "code": "ffffff"
+    },
+    {
+      "index": 32,
+      "code": "gggggg"
+    },
+    {
+      "index": 33,
+      "code": "hhhhhh"
+    },
+    {
+      "index": 34,
+      "code": "iiiiii"
+    },
+    {
+      "index": 35,
+      "code": "jjjjjj"
+    },
+    {
+      "index": 36,
+      "code": "kkkkkk"
+    },
+    {
+      "index": 37,
+      "code": "llllll"
+    },
+    {
+      "index": 38,
+      "code": "mmmmmm"
+    },
+    {
+      "index": 39,
+      "code": "nnnnnn"
+    },
+    {
+      "index": 40,
+      "code": "oooooo"
+    },
+    {
+      "index": 41,
+      "code": "pppppp"
+    },
+    {
+      "index": 42,
+      "code": "qqqqqq"
+    },
+    {
+      "index": 43,
+      "code": "rrrrrr"
+    },
+    {
+      "index": 44,
+      "code": "ssssss"
+    },
+    {
+      "index": 45,
+      "code": "tttttt"
+    },
+    {
+      "index": 46,
+      "code": "uuuuuu"
+    },
+    {
+      "index": 47,
+      "code": "vvvvvv"
+    },
+    {
+      "index": 48,
+      "code": "wwwwww"
+    },
+    {
+      "index": 49,
+      "code": "xxxxxx"
+    },
+    {
+      "index": 50,
+      "code": "yyyyyy"
+    },
+    {
+      "index": 51,
+      "code": "zzzzzz"
+    },
+    {
+      "index": 52,
+      "code": "000000"
+    },
+    {
+      "index": 53,
+      "code": "111111"
+    },
+    {
+      "index": 54,
+      "code": "222222"
+    },
+    {
+      "index": 55,
+      "code": "333333"
+    },
+    {
+      "index": 56,
+      "code": "444444"
+    },
+    {
+      "index": 57,
+      "code": "555555"
+    },
+    {
+      "index": 58,
+      "code": "666666"
+    },
+    {
+      "index": 59,
+      "code": "777777"
+    },
+    {
+      "index": 60,
+      "code": "888888"
+    },
+    {
+      "index": 61,
+      "code": "999999"
+    }
+  ],
+  "create": [
+    {
+      "name": "success",
+      "code": "AAAAAA",
+      "failed": false,
+      "operations": [
+        "SELECT",
+        "INSERT"
+      ]
+    },
+    {
+      "name": "SELECT",
+      "code": null,
+      "failed": true,
+      "operations": [
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "SELECT"
+      ]
+    },
+    {
+      "name": "INSERT",
+      "code": null,
+      "failed": true,
+      "operations": [
+        "SELECT",
+        "INSERT",
+        "SELECT",
+        "INSERT",
+        "SELECT",
+        "INSERT",
+        "SELECT",
+        "INSERT",
+        "SELECT",
+        "INSERT",
+        "SELECT",
+        "INSERT",
+        "SELECT",
+        "INSERT",
+        "SELECT",
+        "INSERT",
+        "SELECT",
+        "INSERT",
+        "SELECT",
+        "INSERT"
+      ]
+    },
+    {
+      "name": "collision-limit",
+      "failed": true,
+      "operations": [
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "SELECT"
+      ]
+    },
+    {
+      "name": "last-attempt-success",
+      "code": "BBBBBB",
+      "operations": [
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "INSERT"
+      ]
+    }
+  ],
+  "expiry": [
+    {
+      "expires_at": 0,
+      "present": true,
+      "returned_count": 3,
+      "stored_count": 4,
+      "last_accessed": 1700000000
+    },
+    {
+      "expires_at": null,
+      "present": true,
+      "returned_count": 3,
+      "stored_count": 4,
+      "last_accessed": 1700000000
+    },
+    {
+      "expires_at": -1,
+      "present": true,
+      "returned_count": 3,
+      "stored_count": 4,
+      "last_accessed": 1700000000
+    },
+    {
+      "expires_at": 1699999999,
+      "present": true,
+      "returned_count": 3,
+      "stored_count": 4,
+      "last_accessed": 1700000000
+    },
+    {
+      "expires_at": 1700000000,
+      "present": true,
+      "returned_count": 3,
+      "stored_count": 4,
+      "last_accessed": 1700000000
+    },
+    {
+      "expires_at": 1700000001,
+      "present": true,
+      "returned_count": 3,
+      "stored_count": 4,
+      "last_accessed": 1700000000
+    }
+  ],
+  "errors": [
+    {
+      "fail": "SELECT",
+      "returns_null": true
+    },
+    {
+      "fail": "UPDATE",
+      "returns_null": true
+    }
+  ],
+  "vectors": [
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSyntheticA&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSyntheticA&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSyntheticA&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSyntheticA&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSyntheticA&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSyntheticA&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSyntheticA&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSyntheticA&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSyntheticA&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSyntheticA&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSyntheticA&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSyntheticA&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSyntheticA&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSyntheticA&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSyntheticA&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSyntheticA&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSyntheticA&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSyntheticA&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSyntheticA&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSyntheticA&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSyntheticA&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSyntheticA&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSyntheticA&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSyntheticA&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=http%3A%2F%2Fh5.cloud.189.cn%2Ft%2FSyntheticB&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=http%3A%2F%2Fh5.cloud.189.cn%2Ft%2FSyntheticB&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=http%3A%2F%2Fh5.cloud.189.cn%2Ft%2FSyntheticB&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=http%3A%2F%2Fh5.cloud.189.cn%2Ft%2FSyntheticB&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=http%3A%2F%2Fh5.cloud.189.cn%2Ft%2FSyntheticB&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=http%3A%2F%2Fh5.cloud.189.cn%2Ft%2FSyntheticB&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=http%3A%2F%2Fh5.cloud.189.cn%2Ft%2FSyntheticB&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=http%3A%2F%2Fh5.cloud.189.cn%2Ft%2FSyntheticB&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=http%3A%2F%2Fh5.cloud.189.cn%2Ft%2FSyntheticB&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=http%3A%2F%2Fh5.cloud.189.cn%2Ft%2FSyntheticB&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=http%3A%2F%2Fh5.cloud.189.cn%2Ft%2FSyntheticB&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=http%3A%2F%2Fh5.cloud.189.cn%2Ft%2FSyntheticB&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=http%3A%2F%2Fh5.cloud.189.cn%2Ft%2FSyntheticB&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=http%3A%2F%2Fh5.cloud.189.cn%2Ft%2FSyntheticB&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=http%3A%2F%2Fh5.cloud.189.cn%2Ft%2FSyntheticB&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=http%3A%2F%2Fh5.cloud.189.cn%2Ft%2FSyntheticB&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=http%3A%2F%2Fh5.cloud.189.cn%2Ft%2FSyntheticB&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=http%3A%2F%2Fh5.cloud.189.cn%2Ft%2FSyntheticB&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=http%3A%2F%2Fh5.cloud.189.cn%2Ft%2FSyntheticB&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=http%3A%2F%2Fh5.cloud.189.cn%2Ft%2FSyntheticB&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=http%3A%2F%2Fh5.cloud.189.cn%2Ft%2FSyntheticB&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=http%3A%2F%2Fh5.cloud.189.cn%2Ft%2FSyntheticB&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=http%3A%2F%2Fh5.cloud.189.cn%2Ft%2FSyntheticB&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=http%3A%2F%2Fh5.cloud.189.cn%2Ft%2FSyntheticB&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fm.cloud.189.cn%2Ft%2FSyntheticC&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=https%3A%2F%2Fm.cloud.189.cn%2Ft%2FSyntheticC&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fm.cloud.189.cn%2Ft%2FSyntheticC&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=https%3A%2F%2Fm.cloud.189.cn%2Ft%2FSyntheticC&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fm.cloud.189.cn%2Ft%2FSyntheticC&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=https%3A%2F%2Fm.cloud.189.cn%2Ft%2FSyntheticC&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fm.cloud.189.cn%2Ft%2FSyntheticC&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=https%3A%2F%2Fm.cloud.189.cn%2Ft%2FSyntheticC&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fm.cloud.189.cn%2Ft%2FSyntheticC&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=https%3A%2F%2Fm.cloud.189.cn%2Ft%2FSyntheticC&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fm.cloud.189.cn%2Ft%2FSyntheticC&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=https%3A%2F%2Fm.cloud.189.cn%2Ft%2FSyntheticC&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fm.cloud.189.cn%2Ft%2FSyntheticC&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=https%3A%2F%2Fm.cloud.189.cn%2Ft%2FSyntheticC&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fm.cloud.189.cn%2Ft%2FSyntheticC&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=https%3A%2F%2Fm.cloud.189.cn%2Ft%2FSyntheticC&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fm.cloud.189.cn%2Ft%2FSyntheticC&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=https%3A%2F%2Fm.cloud.189.cn%2Ft%2FSyntheticC&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fm.cloud.189.cn%2Ft%2FSyntheticC&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=https%3A%2F%2Fm.cloud.189.cn%2Ft%2FSyntheticC&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fm.cloud.189.cn%2Ft%2FSyntheticC&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=https%3A%2F%2Fm.cloud.189.cn%2Ft%2FSyntheticC&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fm.cloud.189.cn%2Ft%2FSyntheticC&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=https%3A%2F%2Fm.cloud.189.cn%2Ft%2FSyntheticC&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Fweb%2Fshare%3Fcode%3DSyntheticD&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Fweb%2Fshare%3Fcode%3DSyntheticD&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Fweb%2Fshare%3Fcode%3DSyntheticD&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Fweb%2Fshare%3Fcode%3DSyntheticD&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Fweb%2Fshare%3Fcode%3DSyntheticD&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Fweb%2Fshare%3Fcode%3DSyntheticD&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Fweb%2Fshare%3Fcode%3DSyntheticD&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Fweb%2Fshare%3Fcode%3DSyntheticD&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Fweb%2Fshare%3Fcode%3DSyntheticD&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Fweb%2Fshare%3Fcode%3DSyntheticD&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Fweb%2Fshare%3Fcode%3DSyntheticD&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Fweb%2Fshare%3Fcode%3DSyntheticD&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Fweb%2Fshare%3Fcode%3DSyntheticD&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Fweb%2Fshare%3Fcode%3DSyntheticD&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Fweb%2Fshare%3Fcode%3DSyntheticD&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Fweb%2Fshare%3Fcode%3DSyntheticD&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Fweb%2Fshare%3Fcode%3DSyntheticD&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Fweb%2Fshare%3Fcode%3DSyntheticD&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Fweb%2Fshare%3Fcode%3DSyntheticD&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Fweb%2Fshare%3Fcode%3DSyntheticD&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Fweb%2Fshare%3Fcode%3DSyntheticD&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Fweb%2Fshare%3Fcode%3DSyntheticD&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Fweb%2Fshare%3Fcode%3DSyntheticD&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Fweb%2Fshare%3Fcode%3DSyntheticD&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Fs%2FSynthetic_E&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Fs%2FSynthetic_E&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Fs%2FSynthetic_E&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Fs%2FSynthetic_E&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Fs%2FSynthetic_E&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Fs%2FSynthetic_E&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Fs%2FSynthetic_E&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Fs%2FSynthetic_E&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Fs%2FSynthetic_E&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Fs%2FSynthetic_E&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Fs%2FSynthetic_E&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Fs%2FSynthetic_E&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Fs%2FSynthetic_E&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Fs%2FSynthetic_E&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Fs%2FSynthetic_E&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Fs%2FSynthetic_E&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Fs%2FSynthetic_E&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Fs%2FSynthetic_E&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Fs%2FSynthetic_E&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Fs%2FSynthetic_E&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Fs%2FSynthetic_E&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Fs%2FSynthetic_E&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Fs%2FSynthetic_E&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=https%3A%2F%2Fcloud.189.cn%2Fs%2FSynthetic_E&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fyun.139.com%2Fshareweb%2F%23%2Fw%2Fi%2FSyntheticF&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=https%3A%2F%2Fyun.139.com%2Fshareweb%2F%23%2Fw%2Fi%2FSyntheticF&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fyun.139.com%2Fshareweb%2F%23%2Fw%2Fi%2FSyntheticF&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=https%3A%2F%2Fyun.139.com%2Fshareweb%2F%23%2Fw%2Fi%2FSyntheticF&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fyun.139.com%2Fshareweb%2F%23%2Fw%2Fi%2FSyntheticF&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=https%3A%2F%2Fyun.139.com%2Fshareweb%2F%23%2Fw%2Fi%2FSyntheticF&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fyun.139.com%2Fshareweb%2F%23%2Fw%2Fi%2FSyntheticF&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=https%3A%2F%2Fyun.139.com%2Fshareweb%2F%23%2Fw%2Fi%2FSyntheticF&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fyun.139.com%2Fshareweb%2F%23%2Fw%2Fi%2FSyntheticF&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=https%3A%2F%2Fyun.139.com%2Fshareweb%2F%23%2Fw%2Fi%2FSyntheticF&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fyun.139.com%2Fshareweb%2F%23%2Fw%2Fi%2FSyntheticF&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=https%3A%2F%2Fyun.139.com%2Fshareweb%2F%23%2Fw%2Fi%2FSyntheticF&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fyun.139.com%2Fshareweb%2F%23%2Fw%2Fi%2FSyntheticF&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=https%3A%2F%2Fyun.139.com%2Fshareweb%2F%23%2Fw%2Fi%2FSyntheticF&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fyun.139.com%2Fshareweb%2F%23%2Fw%2Fi%2FSyntheticF&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=https%3A%2F%2Fyun.139.com%2Fshareweb%2F%23%2Fw%2Fi%2FSyntheticF&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fyun.139.com%2Fshareweb%2F%23%2Fw%2Fi%2FSyntheticF&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=https%3A%2F%2Fyun.139.com%2Fshareweb%2F%23%2Fw%2Fi%2FSyntheticF&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fyun.139.com%2Fshareweb%2F%23%2Fw%2Fi%2FSyntheticF&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=https%3A%2F%2Fyun.139.com%2Fshareweb%2F%23%2Fw%2Fi%2FSyntheticF&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fyun.139.com%2Fshareweb%2F%23%2Fw%2Fi%2FSyntheticF&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=https%3A%2F%2Fyun.139.com%2Fshareweb%2F%23%2Fw%2Fi%2FSyntheticF&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fyun.139.com%2Fshareweb%2F%23%2Fw%2Fi%2FSyntheticF&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=https%3A%2F%2Fyun.139.com%2Fshareweb%2F%23%2Fw%2Fi%2FSyntheticF&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=http%3A%2F%2Fcaiyun.139.com%2Fshareweb%2F%3FlinkID%3DSyntheticG&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=http%3A%2F%2Fcaiyun.139.com%2Fshareweb%2F%3FlinkID%3DSyntheticG&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=http%3A%2F%2Fcaiyun.139.com%2Fshareweb%2F%3FlinkID%3DSyntheticG&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=http%3A%2F%2Fcaiyun.139.com%2Fshareweb%2F%3FlinkID%3DSyntheticG&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=http%3A%2F%2Fcaiyun.139.com%2Fshareweb%2F%3FlinkID%3DSyntheticG&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=http%3A%2F%2Fcaiyun.139.com%2Fshareweb%2F%3FlinkID%3DSyntheticG&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=http%3A%2F%2Fcaiyun.139.com%2Fshareweb%2F%3FlinkID%3DSyntheticG&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=http%3A%2F%2Fcaiyun.139.com%2Fshareweb%2F%3FlinkID%3DSyntheticG&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=http%3A%2F%2Fcaiyun.139.com%2Fshareweb%2F%3FlinkID%3DSyntheticG&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=http%3A%2F%2Fcaiyun.139.com%2Fshareweb%2F%3FlinkID%3DSyntheticG&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=http%3A%2F%2Fcaiyun.139.com%2Fshareweb%2F%3FlinkID%3DSyntheticG&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=http%3A%2F%2Fcaiyun.139.com%2Fshareweb%2F%3FlinkID%3DSyntheticG&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=http%3A%2F%2Fcaiyun.139.com%2Fshareweb%2F%3FlinkID%3DSyntheticG&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=http%3A%2F%2Fcaiyun.139.com%2Fshareweb%2F%3FlinkID%3DSyntheticG&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=http%3A%2F%2Fcaiyun.139.com%2Fshareweb%2F%3FlinkID%3DSyntheticG&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=http%3A%2F%2Fcaiyun.139.com%2Fshareweb%2F%3FlinkID%3DSyntheticG&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=http%3A%2F%2Fcaiyun.139.com%2Fshareweb%2F%3FlinkID%3DSyntheticG&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=http%3A%2F%2Fcaiyun.139.com%2Fshareweb%2F%3FlinkID%3DSyntheticG&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=http%3A%2F%2Fcaiyun.139.com%2Fshareweb%2F%3FlinkID%3DSyntheticG&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=http%3A%2F%2Fcaiyun.139.com%2Fshareweb%2F%3FlinkID%3DSyntheticG&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=http%3A%2F%2Fcaiyun.139.com%2Fshareweb%2F%3FlinkID%3DSyntheticG&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=http%3A%2F%2Fcaiyun.139.com%2Fshareweb%2F%3FlinkID%3DSyntheticG&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=http%3A%2F%2Fcaiyun.139.com%2Fshareweb%2F%3FlinkID%3DSyntheticG&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=http%3A%2F%2Fcaiyun.139.com%2Fshareweb%2F%3FlinkID%3DSyntheticG&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fyun.139.com%2Flink%2F%3Flinkid%3DSyntheticH&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=https%3A%2F%2Fyun.139.com%2Flink%2F%3Flinkid%3DSyntheticH&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fyun.139.com%2Flink%2F%3Flinkid%3DSyntheticH&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=https%3A%2F%2Fyun.139.com%2Flink%2F%3Flinkid%3DSyntheticH&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fyun.139.com%2Flink%2F%3Flinkid%3DSyntheticH&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=https%3A%2F%2Fyun.139.com%2Flink%2F%3Flinkid%3DSyntheticH&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fyun.139.com%2Flink%2F%3Flinkid%3DSyntheticH&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=https%3A%2F%2Fyun.139.com%2Flink%2F%3Flinkid%3DSyntheticH&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fyun.139.com%2Flink%2F%3Flinkid%3DSyntheticH&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=https%3A%2F%2Fyun.139.com%2Flink%2F%3Flinkid%3DSyntheticH&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fyun.139.com%2Flink%2F%3Flinkid%3DSyntheticH&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=https%3A%2F%2Fyun.139.com%2Flink%2F%3Flinkid%3DSyntheticH&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=json&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fyun.139.com%2Flink%2F%3Flinkid%3DSyntheticH&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=https%3A%2F%2Fyun.139.com%2Flink%2F%3Flinkid%3DSyntheticH&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fyun.139.com%2Flink%2F%3Flinkid%3DSyntheticH&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=https%3A%2F%2Fyun.139.com%2Flink%2F%3Flinkid%3DSyntheticH&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fyun.139.com%2Flink%2F%3Flinkid%3DSyntheticH&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=https%3A%2F%2Fyun.139.com%2Flink%2F%3Flinkid%3DSyntheticH&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=down&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fyun.139.com%2Flink%2F%3Flinkid%3DSyntheticH&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "GET",
+      "expected": "/?url=https%3A%2F%2Fyun.139.com%2Flink%2F%3Flinkid%3DSyntheticH&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fyun.139.com%2Flink%2F%3Flinkid%3DSyntheticH&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "POST",
+      "expected": "/?url=https%3A%2F%2Fyun.139.com%2Flink%2F%3Flinkid%3DSyntheticH&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    },
+    {
+      "original_url": "https://parser.example.invalid/?url=https%3A%2F%2Fyun.139.com%2Flink%2F%3Flinkid%3DSyntheticH&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&d=ignoredAlias&fid=root&fid2=root&fid5=child&fid20=leaf",
+      "method": "HEAD",
+      "expected": "/?url=https%3A%2F%2Fyun.139.com%2Flink%2F%3Flinkid%3DSyntheticH&pwd=%E5%90%88%E6%88%90+%2B%26%E5%AF%86%E7%A0%81&type=text&id=fileSynthetic&fid=root&fid2=child&fid3=leaf",
+      "count": 1
+    }
+  ],
+  "route_facts": [
+    {
+      "path": "/api/create-short",
+      "method": "POST",
+      "status": 500,
+      "body": "{\"success\":false,\"msg\":\"无法生成唯一短链\"}"
+    },
+    {
+      "path": "/shorten",
+      "method": "POST",
+      "main": true,
+      "url": "https://parser.example.invalid/shorten"
+    },
+    {
+      "path": "/s/AAAAAA/extra",
+      "method": "HEAD",
+      "main": true,
+      "url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSynthetic"
+    },
+    {
+      "path": "/s/missing",
+      "method": "GET",
+      "status": 404,
+      "body": "短链不存在或已过期"
+    },
+    {
+      "path": "/s/AAAAAA",
+      "method": "GET",
+      "main": true,
+      "url": "https://parser.example.invalid/?url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSynthetic"
+    },
+    {
+      "path": "/s/AAAAAA",
+      "method": "GET",
+      "main": true,
+      "url": "https://parser.example.invalid/?action=synthetic_unsafe&auth=synthetic_unsafe&url=https%3A%2F%2Fcloud.189.cn%2Ft%2FSynthetic"
+    }
+  ]
+}

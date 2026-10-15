@@ -6,6 +6,7 @@
     <title>网盘解析工具</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="/assets/qrcode.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -265,8 +266,10 @@
                 </div>
                 <div class="mt-3 flex items-center gap-2">
                     <button onclick="frontendQrLogin('cloud189')" class="flex-1 text-xs text-white bg-red-500 hover:bg-red-600 py-2 px-3 rounded-lg flex items-center justify-center gap-1 transition-all"><i class="fa fa-qrcode"></i> 扫码登录</button>
-                    <button onclick="saveToMemory('cloud189')" class="flex-1 text-xs text-red-500 border border-red-300 hover:bg-red-50 py-2 px-3 rounded-lg flex items-center justify-center gap-1 transition-all"><i class="fa fa-save"></i> 保存到内存</button>
+                    <button onclick="saveToMemory('cloud189')" class="flex-1 text-xs text-red-500 border border-red-300 hover:bg-red-50 py-2 px-3 rounded-lg flex items-center justify-center gap-1 transition-all"><i class="fa fa-save"></i> 保存到服务端</button>
+                    <button onclick="logoutFrontendAuth('cloud189')" class="text-xs text-red-500">退出登录</button>
                 </div>
+                <p id="cloud189AuthStatus" class="text-xs text-gray-500 mt-2">授权操作需要先登录后台；服务端凭据不会回传浏览器。</p>
             </div>
 
             <!-- 123云盘 -->
@@ -321,8 +324,11 @@
                     <p class="text-xs text-gray-500 mt-1">支持环境变量: MCLOUD_AUTH / MCLOUD_COOKIE</p>
                 </div>
                 <div class="mt-3 flex items-center gap-2">
-                    <button onclick="saveToMemory('mcloud')" class="flex-1 text-xs text-green-600 border border-green-300 hover:bg-green-50 py-2 px-3 rounded-lg flex items-center justify-center gap-1 transition-all"><i class="fa fa-save"></i> 保存到内存</button>
+                    <button onclick="frontendQrLogin('mcloud')" class="flex-1 text-xs text-white bg-blue-500 hover:bg-blue-600 py-2 px-3 rounded-lg"><i class="fa fa-qrcode"></i> 扫码登录</button>
+                    <button onclick="saveToMemory('mcloud')" class="flex-1 text-xs text-green-600 border border-green-300 hover:bg-green-50 py-2 px-3 rounded-lg"><i class="fa fa-save"></i> 保存到服务端</button>
+                    <button onclick="logoutFrontendAuth('mcloud')" class="text-xs text-red-500">退出登录</button>
                 </div>
+                <p id="mcloudAuthStatus" class="text-xs text-gray-500 mt-2">授权操作需要先登录后台；扫码确认后服务端自动保存 Authorization 授权。</p>
             </div>
 
             <!-- 蓝奏云优享版 -->
@@ -462,7 +468,7 @@
 
                         <!-- 解析按钮 -->
                         <div class="pt-2">
-                            <button type="button" id="parseButton" onclick="parseLink()" class="btn btn-primary w-full flex items-center justify-center py-3 rounded-xl font-medium hover:shadow-lg transition-all">
+                            <button type="button" id="parseButton" class="btn btn-primary w-full flex items-center justify-center py-3 rounded-xl font-medium hover:shadow-lg transition-all">
                                 <i class="fa fa-search mr-2"></i> 开始解析
                             </button>
                         </div>
@@ -521,12 +527,10 @@
             const pwd = urlParams.get("pwd") || "";
             const typeDown = urlParams.get("type") === "down";
             if (url) {
-                console.log("检测到URL参数，自动填充并解析");
                 document.getElementById("shareUrl").value = url;
                 if (pwd) document.getElementById("sharePassword").value = pwd;
                 
                 if (typeDown) {
-                    console.log("🚀 检测到type=down模式，将自动跳转下载");
                     window.isDirectDownloadMode = true;
                 }
                 
@@ -548,6 +552,7 @@
         window.memoryConfig = {};
 
         function saveToMemory(panType) {
+            if (panType === "cloud189" || panType === "mcloud") return saveFrontendAuth(panType);
             const values = {};
             switch(panType) {
                 case "aliyun":
@@ -565,21 +570,10 @@
                     if (!values.cookie) { showNotification("请输入Cookie", "error"); return; }
                     window.memoryConfig.uc = values;
                     break;
-                case "cloud189":
-                    values.accessToken = document.getElementById("c189Token").value.trim();
-                    if (!values.accessToken) { showNotification("请输入AccessToken", "error"); return; }
-                    window.memoryConfig.cloud189 = values;
-                    break;
                 case "guangya":
                     values.loginInfo = document.getElementById("guangyaLogin").value.trim();
                     if (!values.loginInfo) { showNotification("请输入登录信息", "error"); return; }
                     window.memoryConfig.guangya = values;
-                    break;
-                case "mcloud":
-                    values.authorization = document.getElementById("mcloudAuth").value.trim();
-                    values.cookie = document.getElementById("mcloudCookie").value.trim();
-                    if (!values.authorization) { showNotification("请输入Authorization", "error"); return; }
-                    window.memoryConfig.mcloud = values;
                     break;
                 case "pan123":
                     values.authorization = document.getElementById("pan123Token").value.trim();
@@ -590,8 +584,129 @@
             showNotification(panType + " 配置已保存到内存（刷新页面后将清除）", "success");
         }
 
+        function localQRCodeDataURL(value) {
+            if (typeof value !== "string" || !value) throw new Error("二维码内容无效");
+            qrcode.stringToBytes = qrcode.stringToBytesFuncs["UTF-8"];
+            const code = qrcode(0, "M");
+            code.addData(value); code.make();
+            return code.createDataURL(4, 16);
+        }
+        function postAction(action, fields = {}, signal) {
+            const body = new URLSearchParams(fields); body.set("action", action);
+            return fetch("/", { method: "POST", credentials: "same-origin", body, signal });
+        }
+        let frontendAuthStatusRequestId = 0;
+        async function refreshFrontendAuthStatus() {
+            const requestId = ++frontendAuthStatusRequestId;
+            const render = text => ["cloud189", "mcloud"].forEach(provider => { const el = document.getElementById(provider + "AuthStatus"); if (el) el.textContent = text; });
+            render("正在读取状态…");
+            try {
+                const r = await fetch("/?action=login_status", { credentials: "same-origin", cache: "no-store" });
+                if (!r.ok) throw new Error("status unavailable");
+                const result = await r.json();
+                if (requestId !== frontendAuthStatusRequestId) return;
+                if (result.success !== true || (result.code !== undefined && result.code !== 200) || !result.data || typeof result.data !== "object" || Array.isArray(result.data)) throw new Error("status unavailable");
+                ["cloud189", "mcloud"].forEach(provider => {
+                    const el = document.getElementById(provider + "AuthStatus"), info = result.data[provider];
+                    if (!el) return;
+                    if (!info || typeof info !== "object" || Array.isArray(info)) { el.textContent = "状态读取失败，请重试"; return; }
+                    const configured = info.configured === true || info.logged_in === true || (info.expired === true && info.configured !== false);
+                    el.textContent = info.migrated === false || info.disabled === true ? "暂不支持账号管理" : configured ? (info.expired === true ? "授权待续期" : "已配置") + "；自动续期始终开启，解析时按需尝试；根授权失效时可能需要重新扫码（未在线验证）。" : "未授权；请先登录后台扫码或手动授权。";
+                });
+            } catch (error) { if (requestId === frontendAuthStatusRequestId) render("状态读取失败，请重试"); }
+        }
+        async function saveFrontendAuth(provider) {
+            const input = document.getElementById(provider === "cloud189" ? "c189Token" : "mcloudAuth");
+            const value = input.value.trim();
+            if (!value) { showNotification("请填写授权凭据", "error"); return; }
+            try {
+                const r = await postAction(provider + "_manual_save", provider === "cloud189" ? { access_token: value } : { authorization: value });
+                const result = await r.json();
+                if (!result.success) { showNotification("保存失败，请确认已登录后台: " + (result.msg || "未知错误"), "error"); return; }
+                input.value = ""; delete window.memoryConfig[provider];
+                if (provider === "mcloud") document.getElementById("mcloudCookie").value = "";
+                closeQrLogin(); refreshFrontendAuthStatus(); showNotification("服务端已保存授权", "success");
+            } catch (error) { showNotification("保存失败，请重试", "error"); }
+        }
+        async function logoutFrontendAuth(provider) {
+            if (!confirm("确定退出该网盘授权吗？")) return;
+            try {
+                const r = await postAction(provider + "_logout");
+                const result = await r.json();
+                if (!result.success) { showNotification("退出失败，请确认已登录后台", "error"); return; }
+                closeQrLogin(); delete window.memoryConfig[provider];
+                document.getElementById(provider === "cloud189" ? "c189Token" : "mcloudAuth").value = "";
+                if (provider === "mcloud") document.getElementById("mcloudCookie").value = "";
+                refreshFrontendAuthStatus(); showNotification("已退出登录", "success");
+            } catch (error) { showNotification("退出失败，请重试", "error"); }
+        }
+        let frontendAuthQR = null;
+        let legacyQRStop = null;
+        function stopFrontendAuthQR() {
+            const state = frontendAuthQR;
+            if (state) { clearTimeout(state.poll); clearInterval(state.clock); state.controller.abort(); frontendAuthQR = null; }
+        }
+        async function frontendAuthQrLogin(provider) {
+            closeQrLogin();
+            if (document.hidden) return;
+            const modal = document.getElementById("qrLoginModal");
+            const container = document.getElementById("qrCodeContainer");
+            const status = document.getElementById("qrLoginStatus");
+            const timer = document.getElementById("qrLoginTimer");
+            document.getElementById("qrLoginTitle").textContent = (provider === "cloud189" ? "天翼云盘" : "移动云盘") + " 扫码登录";
+            modal.style.display = "flex"; container.textContent = ""; status.textContent = "正在获取二维码..."; timer.textContent = "";
+            const state = { controller: new AbortController(), deadline: Date.now() + 300000 };
+            frontendAuthQR = state;
+            const active = () => frontendAuthQR === state;
+            const finish = text => { stopFrontendAuthQR(); status.textContent = text; timer.textContent = ""; };
+            state.clock = setInterval(() => {
+                if (!active()) return;
+                if (document.hidden || modal.style.display === "none") { closeQrLogin(); return; }
+                const seconds = Math.max(0, Math.ceil((state.deadline - Date.now()) / 1000));
+                timer.textContent = "二维码有效期剩余: " + seconds + "秒";
+                if (!seconds) { finish("二维码已过期，请重新扫码"); container.textContent = ""; }
+            }, 1000);
+            try {
+                const r = await postAction(provider + "_qrcode", {}, state.controller.signal);
+                const result = await r.json();
+                if (!active()) return;
+                if (!result.success || !result.data?.qr_url || !result.data.device_id) { finish("获取失败，请确认已登录后台: " + (result.msg || "未知错误")); return; }
+                state.deadline = Math.min(state.deadline, Date.now() + Math.min(300, Math.max(1, Number(result.data.expires_in) || 300)) * 1000);
+                const image = document.createElement("img");
+                image.src = localQRCodeDataURL(result.data.qr_url);
+                image.alt = "二维码"; image.style.width = "200px"; image.style.height = "200px"; container.appendChild(image);
+                status.textContent = "请使用对应网盘APP扫码登录";
+                const delay = Math.min(10, Math.max(1, Number(result.data.interval) || 3)) * 1000;
+                const poll = async () => {
+                    if (!active()) return;
+                    if (document.hidden || modal.style.display === "none") { closeQrLogin(); return; }
+                    if (Date.now() >= state.deadline) { finish("二维码已过期，请重新扫码"); return; }
+                    try {
+                        const r = await postAction(provider + "_check", { device_id: result.data.device_id }, state.controller.signal);
+                        const checked = await r.json();
+                        if (!active()) return;
+                        const phase = checked.data?.status;
+                        if (checked.success && (phase === "success" || phase === "confirmed")) {
+                            finish("登录成功！服务端已自动保存授权"); container.textContent = "✓";
+                            document.getElementById(provider === "cloud189" ? "c189Token" : "mcloudAuth").value = "";
+                            if (provider === "mcloud") document.getElementById("mcloudCookie").value = "";
+                            delete window.memoryConfig[provider]; refreshFrontendAuthStatus(); return;
+                        }
+                        if (phase === "expired" || phase === "denied" || !checked.success) { finish(phase === "expired" ? "二维码已过期，请重新扫码" : checked.msg || "授权失败，请重试"); container.textContent = ""; return; }
+                        status.textContent = phase === "scanned" ? "已扫码，请在手机上确认登录" : "等待扫码中...";
+                    } catch (error) { if (active()) status.textContent = "检查失败，等待重试..."; }
+                    if (active()) state.poll = setTimeout(poll, delay);
+                };
+                state.poll = setTimeout(poll, delay);
+            } catch (error) { if (active()) finish("请求失败，请确认已登录后台后重试"); }
+        }
+        document.addEventListener("visibilitychange", () => { if (document.hidden) closeQrLogin(); });
+        document.addEventListener("DOMContentLoaded", refreshFrontendAuthStatus);
+
         // 前端扫码登录 - 直接调用后端已有的API
         async function frontendQrLogin(panType) {
+            if (panType === "cloud189" || panType === "mcloud") return frontendAuthQrLogin(panType);
+            closeQrLogin();
             const modal = document.getElementById("qrLoginModal");
             const title = document.getElementById("qrLoginTitle");
             const container = document.getElementById("qrCodeContainer");
@@ -624,9 +739,10 @@
             let timerInterval = null;
             let pollInterval = null;
             
+            legacyQRStop = () => { clearInterval(timerInterval); clearInterval(pollInterval); };
             try {
                 // Step1: 调用后端API获取二维码
-                const resp = await fetch("/?action=" + cfg.qrAction);
+                const resp = await postAction(cfg.qrAction);
                 const result = await resp.json();
                 
                 if (!result.success || !result.data) {
@@ -659,9 +775,8 @@
                     return;
                 }
                 
-                // 使用在线API生成二维码图片（后端返回的是URL，不是图片）
-                const qrImgUrl = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=10&data=" + encodeURIComponent(qrUrl);
-                container.innerHTML = '<img src="' + qrImgUrl + '" style="width:200px;height:200px;border-radius:12px;" alt="二维码" onerror="this.onerror=null;this.src=\'https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=\' + encodeURIComponent(\'' + qrUrl + '\')"/>';
+                // 在浏览器本地编码扫码会话，不向第三方图片服务发送授权内容。
+                container.innerHTML = '<img src="' + localQRCodeDataURL(qrUrl) + '" style="width:200px;height:200px;border-radius:12px;" alt="二维码"/>';
                 statusEl.textContent = "请使用手机" + (panNames[panType] || "") + "APP扫码登录";
                 
                 // Step2: 开始倒计时
@@ -680,7 +795,7 @@
                 // Step3: 轮询登录状态
                 pollInterval = setInterval(async () => {
                     try {
-                        const pollResp = await fetch(pollUrl);
+                        const pollResp = await postAction(cfg.pollAction, new URLSearchParams(pollUrl.split("?")[1]));
                         const pollResult = await pollResp.json();
                         
                         if (pollResult.success && pollResult.data) {
@@ -701,10 +816,6 @@
                                 } else if (panType === "uc") {
                                     savedData.cookie = pollResult.data.cookie || pollResult.data.token || "";
                                     document.getElementById("ucCookie").value = savedData.cookie;
-                                } else if (panType === "cloud189") {
-                                    const loginInfo = pollResult.data.loginInfo || {};
-                                    savedData.accessToken = loginInfo.access_token || loginInfo.open_access_token || loginInfo.app_access_token || "";
-                                    document.getElementById("c189Token").value = savedData.accessToken;
                                 } else if (panType === "guangya") {
                                     savedData.loginInfo = JSON.stringify({
                                         access_token: pollResult.data.access_token || "",
@@ -751,6 +862,8 @@
         }
 
         function closeQrLogin() {
+            stopFrontendAuthQR();
+            if (legacyQRStop) { legacyQRStop(); legacyQRStop = null; }
             document.getElementById("qrLoginModal").style.display = "none";
         }
 
@@ -768,7 +881,7 @@
             showNotification("正在登录" + (panNames[panType] || panType) + "...", "info");
             
             try {
-                const resp = await fetch("/?action=frontend_account_login&type=" + panType + "&account=" + encodeURIComponent(account) + "&password=" + encodeURIComponent(password));
+                const resp = await postAction("frontend_account_login", { type: panType, account, password });
                 const result = await resp.json();
                 
                 if (result.success) {
@@ -867,7 +980,6 @@
             const originalType = urlParams.get("type");
             if (originalType) {
                 requestUrl += "&type=" + encodeURIComponent(originalType);
-                console.log("📤 传递原始type参数:", originalType);
             } else {
                 requestUrl += "&type=json";
             }
@@ -945,9 +1057,8 @@
             const resultDiv = document.getElementById("result");
             const { url: shareUrl, pwd } = params;
             
-            console.log("[蓝奏云] 纯前端模式启动, URL:", shareUrl);
             
-            resultDiv.innerHTML = `<div class="text-center py-8"><i class="fa fa-spinner fa-spin text-3xl text-primary mb-4 block"></i><p class="text-gray-600">正在通过浏览器直接连接蓝奏云...</p><p class="text-xs text-gray-400 mt-2">（纯前端模式，仿照PHP逻辑）</p></div>`;
+            resultDiv.innerHTML = `<div class="text-center py-8"><i class="fa fa-spinner fa-spin text-3xl text-primary mb-4 block"></i><p class="text-gray-600">正在通过浏览器直接连接蓝奏云...</p><p class="text-xs text-gray-400 mt-2">请稍候</p></div>`;
             
             // ====== PHP常量定义（第33-34行）======
             const desktopUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
@@ -981,7 +1092,6 @@
             // 尝试每个域名获取分享页
             for (const domain of allDomains) {
                 try {
-                    console.log("[蓝奏云] 尝试分享页:", domain + "/" + id);
                     const resp = await fetch(`https://${domain}/${id}`, {
                         method: "GET",
                         headers: { ...baseHeaders, "User-Agent": desktopUA },
@@ -1005,15 +1115,9 @@
                     if (resp.ok && isRealPage) {
                         data = text;
                         usedDomain = domain;
-                        console.log("[蓝奏云]  分享页成功:", domain, "| 大小:", text.length);
                         break;
-                    } else {
-                        console.log("[蓝奏云] ⏭️ 跳过:", domain, "| 状态:", resp.status, "| 大小:", text.length, 
-                                    text.includes("arg1") ? "(WAF)" : "");
                     }
-                } catch(e) {
-                    console.log("[蓝奏云] 域名错误:", domain, e.message);
-                }
+                } catch(e) { /* 继续尝试下一个可用域名。 */ }
             }
             
             if (!data) {
@@ -1035,7 +1139,6 @@
             // ====== 处理iframe/WAF JS（第138-141行，对应PHP pc()函数）======
             const iframeMatch = data.match(/<iframe\b[^>]* src="(.+?)"/);
             if (iframeMatch) {
-                console.log("[蓝奏云] 检测到iframe, 获取:", iframeMatch[1]);
                 try {
                     const iframeResp = await fetch(`https://${usedDomain}${iframeMatch[1]}`, {
                         headers: { ...baseHeaders, "User-Agent": desktopUA },
@@ -1044,7 +1147,6 @@
                     const iframeData = await iframeResp.text();
                     const wafJsMatch = iframeData.match(/(https?:\/\/waf\.woozooo\.com\/pc\/.+\.js)/);
                     if (wafJsMatch) {
-                        console.log("[蓝奏云] WAF JS URL:", wafJsMatch[1]);
                         const wafResp = await fetch(wafJsMatch[1], {
                             headers: { ...baseHeaders, "User-Agent": desktopUA },
                             credentials: "include"
@@ -1053,9 +1155,7 @@
                     } else {
                         js = iframeData;
                     }
-                } catch(e) {
-                    console.log("[蓝奏云] iframe处理失败:", e.message);
-                }
+                } catch(e) { /* 继续使用已获取的页面内容。 */ }
             }
             
             // 清理JS（第473行，对应PHP geturl()函数）
@@ -1123,16 +1223,9 @@
             const websignkeyArr = cleanJs.match(/(?<=')(?!=|post|sign|json)[a-zA-Z0-9]{4}(?=')/) || [];
             const websignkey = websignkeyArr[0] || "";
             
-            console.log("[蓝奏云] 📋 参数提取:", {
-                domain: usedDomain,
-                fileid: fileid,
-                sign: sign ? sign.substring(0,20)+"..." : "(null)",
-                hasPwd: !!pwd,
-                cookieLen: cookieStr.length
-            });
             
             if (!fileid || !sign) {
-                resultDiv.innerHTML = `<div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center"><i class="fa fa-exclamation-triangle text-yellow-500 text-2xl mb-3 block"></i><h3 class="text-yellow-700 font-medium mb-2">参数提取不完整</h3><pre class="text-left text-xs bg-gray-50 rounded p-3 mt-2 overflow-auto">${JSON.stringify({hasFileId:!!fileid,hasSign:!!sign,domain:usedDomain},null,2)}</pre></div>`;
+                resultDiv.innerHTML = '<div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center"><i class="fa fa-exclamation-triangle text-yellow-500 text-2xl mb-3 block"></i><h3 class="text-yellow-700 font-medium mb-2">暂时无法解析该文件</h3><p class="text-sm text-yellow-600">请稍后重试，或打开原分享链接。</p></div>';
                 return;
             }
             
@@ -1141,7 +1234,6 @@
             const urlParamMatch = cleanJs.match(/(?<=\x27)\?.+(?=\x27)/);
             if (domMatch && urlParamMatch && !pwd) {
                 const directUrl = domMatch[0] + urlParamMatch[0];
-                console.log("[蓝奏云] 发现无密码直链!");
                 resultDiv.innerHTML = `<div class="bg-green-50 border border-green-200 rounded-lg p-6"><div class="flex items-center justify-between mb-4"><div class="flex items-center"><i class="fa fa-check-circle text-green-500 text-xl mr-3"></i><h3 class="text-green-800 font-medium">解析成功</h3></div><span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">纯前端</span></div><div class="mt-4 flex gap-2"><a href="${escapeHtml(directUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-primary flex-1"><i class="fa fa-download mr-1"></i>下载文件</a><button onclick="copyText(\x27${escapeHtml(directUrl)}\x27)" class="btn btn-outline-primary px-4"><i class="fa fa-copy mr-1"></i>复制链接</button></div></div>`;
                 updateStats({ code: 200, success: true });
                 return;
@@ -1162,7 +1254,6 @@
             // 尝试多个ajax域名（PHP固定使用 www.lanzouf.com）
             for (const ajaxDomain of domains) {
                 try {
-                    console.log("[蓝奏云] POST ajaxm.php:", ajaxDomain);
                     const ajaxResp = await fetch(`https://${ajaxDomain}/ajaxm.php?file=${fileid}`, {
                         method: "POST",
                         headers: {
@@ -1177,18 +1268,15 @@
                     });
                     
                     const ajaxText = await ajaxResp.text();
-                    console.log("[蓝奏云] ajax响应:", ajaxDomain, "| 状态:", ajaxResp.status, "| 长度:", ajaxText.length);
                     
                     if (ajaxText.startsWith("{")) {
                         try {
                             const json = JSON.parse(ajaxText);
                             if (json.zt === 1) {
                                 ajaxResult = json;
-                                console.log("[蓝奏云]  解析成功! 文件:", json.inf);
                                 break;
                             } else {
                                 lastError = json.inf || "服务器错误";
-                                console.log("[蓝奏云] ⚠️ 返回:", lastError);
                             }
                         } catch(e) {
                             lastError = "JSON解析失败";
@@ -1198,7 +1286,6 @@
                     }
                 } catch(e) {
                     lastError = e.message;
-                    console.log("[蓝奏云] ajax错误:", ajaxDomain, e.message);
                 }
             }
             
@@ -1234,7 +1321,6 @@
             
             // 🔑 蓝奏云纯前端模式 (code=206)
             if (result.code === 206 && (result.msg === "PARAMS_ONLY" || result.msg === "PURE_FRONTEND") && result.data) {
-                console.log("[蓝奏云] 检测到纯前端模式 (" + result.msg + ")，浏览器开始解析...");
                 parseLanzouFrontend(result.data);
                 return;
             }
@@ -1245,7 +1331,6 @@
                 
                 //  检测是否为夸克网盘直链下载模式（type=down + is_quark_direct_link）
                 if (window.isDirectDownloadMode && result.data && result.data.is_quark_direct_link && result.data.download_url) {
-                    console.log("🚀 检测到夸克网盘直链，启动JavaScript内置下载器...");
                     const downloadUrl = result.data.downloadUrl;
                     const fileName = result.data.file_name || "download";
                     const fileSize = result.data.file_size || 0;
@@ -1277,14 +1362,14 @@
                         if (p) href += "&pwd=" + encodeURIComponent(p);
                         window.open(href, "_blank");
                     };
-                    function jxIsFile(v) { return v && typeof v === "object" && Object.prototype.hasOwnProperty.call(v, "id") && Object.keys(v).every(function(k) { return k === "id" || k === "size"; }); }
+                    function jxIsFile(v) { return v && typeof v === "object" && (typeof v.id === "string" || typeof v.id === "number") && Object.keys(v).every(function(k) { return k === "id" || k === "size"; }); }
                     function jxRenderTree(node) {
                         let html = "";
                         const keys = Object.keys(node || {});
                         for (let i = 0; i < keys.length; i++) {
                             const name = keys[i], v = node[name];
                             if (jxIsFile(v)) {
-                                html += '<div class="flex items-center px-3 py-2 bg-white hover:bg-gray-50 rounded border border-gray-200 mb-1"><i class="fa fa-file-text-o text-gray-400 mr-2"></i><span class="text-sm text-gray-800 truncate flex-grow" title="' + escapeHtml(name) + '">' + escapeHtml(name) + '</span><span class="text-xs text-gray-500 mr-3">' + escapeHtml(formatFileSizeLocal(v.size || 0)) + '</span><button class="btn btn-primary btn-xs" data-id="' + escapeHtml(String(v.id)) + '" onclick="jxpanTreeDown(this)">直链</button></div>';
+                                html += '<div class="flex items-center px-3 py-2 bg-white hover:bg-gray-50 rounded border border-gray-200 mb-1"><i class="fa fa-file-text-o text-gray-400 mr-2"></i><span class="text-sm text-gray-800 truncate flex-grow" title="' + escapeHtml(name) + '">' + escapeHtml(name) + '</span><span class="text-xs text-gray-500 mr-3">' + escapeHtml(v.size === null ? "大小未知" : formatFileSizeLocal(v.size || 0)) + '</span><button class="btn btn-primary btn-xs" data-id="' + escapeHtml(String(v.id)) + '" onclick="jxpanTreeDown(this)">直链</button></div>';
                             } else {
                                 html += '<details open class="ml-1 mb-1"><summary class="cursor-pointer py-1 text-sm font-medium text-gray-700"><i class="fa fa-folder text-sky-500 mr-1"></i>' + escapeHtml(name) + '</summary><div class="ml-3">' + jxRenderTree(v) + '</div></details>';
                             }
@@ -1714,7 +1799,6 @@
                     
                     // 生成短链接按钮（所有单文件结果显示）
                     html += '<button onclick="generateShortLink(this)" class="btn btn-outline w-full flex items-center justify-center mt-2"><i class="fa fa-link mr-2"></i> 生成短链接</button>';
-                    console.log("[前端]  单文件结果已添加\"生成短链接\"按钮");
                     
                     html += '</div>';
                     resultDiv.innerHTML = html;
@@ -1729,7 +1813,6 @@
         
         //  通用短链显示组件（在按钮下方滑动展开）
         async function showShortLinkBox(button, fullUrl) {
-            console.log("[短链组件] 开始生成短链, URL长度:", fullUrl.length);
             
             // 检查是否已经存在短链框，如果存在则移除
             const existingBox = button.parentElement.querySelector('.short-link-box');
@@ -1754,7 +1837,6 @@
                 });
                 
                 const result = await response.json();
-                console.log("[短链组件] API响应:", result);
                 
                 //  恢复按钮状态
                 button.disabled = false;
@@ -1767,7 +1849,6 @@
                 
                 //  构建短链
                 const shortUrl = window.location.origin + "/s/" + result.shortcode;
-                console.log("[短链组件] 短链已生成:", shortUrl);
                 
                 //  创建短链显示框（滑动展开效果，与解析弹窗UI完全一致）
                 const shortLinkBox = document.createElement('div');
@@ -1803,7 +1884,6 @@
                 showNotification("\u2705 短链已生成", "success");
                 
             } catch (err) {
-                console.error("[短链组件] 错误:", err);
                 button.disabled = false;
                 button.innerHTML = originalText;
                 showNotification("\u274c 生成失败: " + err.message, "error");
@@ -1855,7 +1935,7 @@
                         if (statCached) statCached.textContent = stats.cached;
                     }
                 })
-                .catch(err => { console.log("获取统计数据失败:", err); });
+                .catch(() => {});
         }
         function startFrontendStatsPolling() {
             if (frontendStatsInterval) clearInterval(frontendStatsInterval);
@@ -2131,10 +2211,6 @@
         
         //  JavaScript内置下载器（用于夸克网盘OSS直链）
         async function autoDownloadQuarkFile(downloadUrl, fileName, fileSize) {
-            console.log("🚀 JS下载器启动...");
-            console.log("📁 文件名:", fileName);
-            console.log("📦 文件大小:", formatFileSizeLocal(fileSize));
-            console.log("🔗 URL长度:", downloadUrl.length);
             
             // 显示下载进度界面
             const resultDiv = document.getElementById("result");
@@ -2253,10 +2329,8 @@
                     '</div>\n' +
                 '</div>';
                 
-                console.log(" 下载成功！文件大小:", formatFileSizeLocal(receivedLength));
                 
             } catch (error) {
-                console.error("❌ 下载失败:", error);
                 
                 // 显示错误信息和备用方案
                 resultDiv.innerHTML = '<div class="bg-red-50 p-6 rounded-xl border border-red-200 shadow-lg">\n' +
@@ -2479,7 +2553,6 @@
         
         //  天翼云盘子文件夹树形展开（类似小飞机网盘）
         function toggleCloud189Subfolder(clickEl) {
-            console.log("[toggleCloud189Subfolder] 开始执行, fileId=" + (clickEl.dataset.fileId || ""));
             const treeItem = clickEl.closest(".tree-item");
             const childrenDiv = treeItem ? treeItem.querySelector(".tree-children") : null;
             const chevron = clickEl.querySelector(".tree-chevron");
@@ -2592,7 +2665,6 @@
         
         //  解析天翼云盘单个文件（用于树形展开后的文件点击，动态弹窗模式）
         async function parseCloud189FileItem(clickEl) {
-            console.log("[parseCloud189FileItem] 开始执行, fileId=" + (clickEl.dataset.fileId || ""));
             const fileId = clickEl.dataset.fileId || "";
             const fileName = clickEl.dataset.fileName || "未知文件";
             const fileSize = clickEl.dataset.fileSize || "-";
@@ -2692,7 +2764,6 @@
         function parsePanFileItem(btn) {
             const isAliyun = btn.dataset.isAliyun === "true";
             const isPan123 = btn.dataset.isPan123 === "true";
-            console.log("[parsePanFileItem] isAliyun=" + isAliyun + ", isPan123=" + isPan123 + ", fileId=" + btn.dataset.fileId);
             if (isPan123) {
                 parsePan123FileItem(btn);
             } else if (isAliyun) {
@@ -2704,7 +2775,6 @@
         
         //  解析123云盘子文件（点击直链按钮，调用pan123_get_download_url获取下载链接）
         async function parsePan123FileItem(clickEl) {
-            console.log("[parsePan123FileItem] 开始执行, fileId=" + (clickEl.dataset.fileId || ""));
             const fileId = clickEl.dataset.fileId || "";
             const fileName = clickEl.dataset.fileName || "未知文件";
             const fileSize = clickEl.dataset.fileSize || "-";
@@ -2725,7 +2795,6 @@
                 }
                 parentEl = parentEl.parentElement;
             }
-            console.log("[parsePan123FileItem] folderIdChain=" + JSON.stringify(pan123FolderChain));
 
             if (!fileId || !shareKey) {
                 showNotification("缺少文件ID或shareKey", "error");
@@ -2745,7 +2814,6 @@
 
             try {
                 const rawSize = clickEl.dataset.rawSize || "0";
-                console.log("[parsePan123FileItem] rawSize=" + rawSize + ", s3KeyFlag=" + s3KeyFlag + ", etag=" + etag);
                 const fileInfo = { fileId: fileId, s3KeyFlag: s3KeyFlag, size: parseInt(rawSize), etag: etag };
                 const dlUrl = "/?action=pan123_get_download_url" + (pan123Auth ? "&pan123_auth=" + encodeURIComponent(pan123Auth) : "");
                 const resp = await fetch(dlUrl, {
@@ -2781,7 +2849,6 @@
                     showNotification("未获取到下载链接", "error");
                 }
             } catch (err) {
-                console.error("[parsePan123FileItem] 异常:", err);
                 showNotification("解析异常: " + err.message, "error");
             }
         }
@@ -2860,7 +2927,6 @@
         
         //  解析阿里云盘子文件（用于树形展开后的文件点击，动态弹窗模式）
         async function parseAliyunFileItem(clickEl) {
-            console.log("[parseAliyunFileItem] 开始执行, fileId=" + (clickEl.dataset.fileId || ""));
             const fileId = clickEl.dataset.fileId || "";
             const fileName = clickEl.dataset.fileName || "未知文件";
             const fileSize = clickEl.dataset.fileSize || "-";
@@ -2949,7 +3015,6 @@
         //  解析夸克网盘单个文件（支持大文件自动降级）
         function parseQuarkFile(button) {
             try {
-            console.log("[夸克] parseQuarkFile called, button.dataset:", JSON.stringify(button.dataset));
             const fid = button.dataset.fid || "";
             const fileName = button.dataset.fileName || "未知文件";
             const fileSize = button.dataset.size || "-";
@@ -3051,7 +3116,6 @@
                     showNotification("❌ 网络异常: " + err.message, "error");
                 });
             } catch(outerErr) {
-                console.error("[夸克] parseQuarkFile 外层错误:", outerErr);
                 showNotification("❌ 解析异常: " + outerErr.message, "error");
                 var modalEl = document.getElementById("fileModal");
                 if (modalEl && !modalEl.classList.contains("active")) modalEl.classList.add("active");
@@ -3115,8 +3179,10 @@
                 return;
             }
             
-            // 没有预加载链接，发送AJAX请求解析
-            var apiUrl = "?action=parse_mcloud_subfolder&url=" + encodeURIComponent(shareUrl) + "&pwd=" + encodeURIComponent(pwd) + "&file_id=" + encodeURIComponent(fileId);
+            // 使用普通解析入口保留目标文件 ID；根目录文件无需 fid 链。
+            const params = new URLSearchParams({ url: shareUrl, pwd: pwd, id: fileId, type: "json" });
+            fileFidChain.forEach(function(fid, index) { params.set(index === 0 ? "fid" : "fid" + (index + 1), fid); });
+            const apiUrl = "?" + params.toString();
             fetch(apiUrl)
                 .then(function(r) { return r.json(); })
                 .then(function(result) {
@@ -3142,6 +3208,7 @@
                         var dlUrlForFn = dlUrl;
                         var mcloudDownUrl = window.location.origin + window.location.pathname + "?url=" + encodeURIComponent(shareUrl);
                         if (pwd) { mcloudDownUrl += "&pwd=" + encodeURIComponent(pwd); }
+                        fileFidChain.forEach(function(fid, index) { mcloudDownUrl += "&" + (index === 0 ? "fid" : "fid" + (index + 1)) + "=" + encodeURIComponent(fid); });
                         mcloudDownUrl += "&id=" + encodeURIComponent(fileId) + "&type=down";
                         var mcloudDownUrlForFn = mcloudDownUrl;
                         document.getElementById("modalDownBtn").addEventListener("click", function() { downloadLanzouFile(dlUrlForFn, dlNameForFn); });
@@ -3150,7 +3217,7 @@
                         showNotification(dlName + " 解析成功", "success");
                     } else {
                         if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa fa-redo mr-1"></i>重新解析'; btn.onclick = function() { parseMcloudFile(button); }; }
-                        var errHtml = "<div><div class=\"label\">错误</div><div class=\"value\" style=\"color:#dc3545\">" + (result.msg || "解析失败") + "</div></div>";
+                        var errHtml = "<div><div class=\"label\">错误</div><div class=\"value\" style=\"color:#dc3545\">" + escapeHtml(result.msg || "解析失败") + "</div></div>";
                         document.getElementById("modalResult").innerHTML = errHtml;
                         showNotification("解析失败: " + (result.msg || "未知错误"), "error");
                     }
@@ -3158,7 +3225,7 @@
                 .catch(function(err) {
                     var btn = document.getElementById("modalParseBtn");
                     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa fa-redo mr-1"></i>重新解析'; btn.onclick = function() { parseMcloudFile(button); }; }
-                    var errHtml = "<div><div class=\"label\">异常</div><div class=\"value\" style=\"color:#dc3545\">" + err.message + "</div></div>";
+                    var errHtml = "<div><div class=\"label\">异常</div><div class=\"value\" style=\"color:#dc3545\">" + escapeHtml(err.message) + "</div></div>";
                     document.getElementById("modalResult").innerHTML = errHtml;
                     showNotification("请求异常: " + err.message, "error");
                 });
@@ -3947,7 +4014,6 @@
             // 检查是否有预加载的下载链接（光鸭云盘会预先获取）
             var existingDownloadUrl = button.dataset.downloadUrl || "";
             if (existingDownloadUrl) {
-                console.log("[光鸭] 使用预加载的下载链接");
                 updateParseDialog({
                     downloadUrl: existingDownloadUrl,
                     paramUrl: window.currentParamUrl,

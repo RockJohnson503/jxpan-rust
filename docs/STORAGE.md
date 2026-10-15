@@ -1,10 +1,10 @@
 # 本地 SQLite KV 存储（独立基础模块）
 
-本模块提供本地 KV 与旧 JxPan KV AES 协议兼容基础。**不代表全套持久化完成**：未接入 HTTP、登录态、解析缓存、统计、记录分页或短链，也未迁移 Cloudflare D1 数据。测试只使用合成数据与临时本地数据库，无远程数据库访问。
+本模块提供本地 KV 与旧 JxPan KV AES 兼容，现已导出并由共享 AppState 接入授权、后台会话、解析历史/统计和短链；各 repository 共用同一 actor，不另建连接池。解析缓存仍为进程内有界缓存。**不代表旧数据迁移或整套验收完成**：未迁移旧 Cloudflare D1 数据，存储测试只用合成输入与临时 SQLite，无远程数据库访问。当前业务/HTTP 验证见 [STATUS](STATUS.md)。
 
 ## 集成要求与 API
 
-父项目需启用 `rusqlite = { version = "0.37", features = ["bundled"] }`、Tokio `sync`（现有 `rt`、`macros` 足够），并导出 `storage` 模块。本任务不修改 Cargo/lib/HTTP。
+根 crate 已启用所需 rusqlite/Tokio features，并导出 `storage`。`Storage::with_connection` 是共享 repository 的有界 owner-thread 扩展入口；HTTP、授权、记录和短链的接线不改变本模块的 KV/关闭/权限协议。
 
 ```rust,ignore
 let kv = Storage::open("local.sqlite", 64).await?;
@@ -26,6 +26,14 @@ kv.close().await?;
 - CAS 在 `BEGIN IMMEDIATE` 事务中比较**解码后的 JSON 值**，不比较序列化字符串或密文字节。`expected: None` 也匹配过期行；`replacement: None` 删除。
 - `update` 回调在同一事务、数据库工作线程上执行一次。`Keep` 保留值与原过期时间，`Delete` 删除，`Put` 替换值并重设 TTL。返回最终值。
 - 回调返回错误或 panic 时回滚事务，panic 映射为 `UpdatePanicked`。未自定义全局 panic hook；应用自行保证 hook 不输出敏感信息。回调禁止网络、阻塞工作、异步等待和再次调用本存储。运行时检查工作线程重入并返回 `SameThread`，防止回调通过 `block_on` 自等死锁。
+
+## 单值字节上限与解析设置
+
+- `MAX_VALUE_BYTES = 2 MiB`：序列化 JSON 明文上限；`encrypt_for_kv` 使用有界 writer，超限明确 `ValueTooLarge`，不先完整序列化一个无界副本再检查。兼容明文旧行也遵守这个上限。
+- AES 填充与十六进制扩张后的上限为 `MAX_STORED_VALUE_BYTES = (MAX_VALUE_BYTES / 16 + 1) * 32`（4 MiB + 32 字节）；解密后再次核对 2 MiB，不能只检查密文长度。
+- 读取在 SQLite `CASE + length(CAST(value AS BLOB))` 中先判断字节数；对旧明文 `{`/`[` 行与密文分别设上限，**在 rusqlite 把字段复制成 Rust String 之前**拒绝超大值。使用 BLOB 字节数，不以 SQLite TEXT 字符数替代 UTF-8 字节预算。
+- 这些是单值/复制边界，不是 KV 总磁盘 quota、整个进程 RSS 限额或完整秘密保护。旧超大行受控报错，不为升级而自动删除/重写。
+- 后台解析设置存于 `rust_parse_settings`，值 `{"concurrency":N}`，范围 1–16、代码默认 16，**无 TTL**；已有合法值优先，缺键不写默认值，非法值明确初始化失败。10-14 保存 4 为历史观察；2026-10-15 最新只读审计保存 **16**，全库与本次切换前相同，没有设置写入；有效值按已验证构造逻辑推断，非授权 endpoint 直接观测，见 `.scratch/cloud189-fix-8789/final-audit.json`。SQLite 已接受更新命令同时持排序锁与运行时发布动作，HTTP 等待者取消后仍执行，写失败不发布。详见 [PARSE_SETTINGS](PARSE_SETTINGS.md) / [CONCURRENCY_BENCHMARK](CONCURRENCY_BENCHMARK.md)。
 
 ## 专用线程、有界队列与生命周期
 
@@ -50,7 +58,7 @@ CREATE TABLE IF NOT EXISTS kv_store (
 );
 ```
 
-这里的 expiration 概念实际名为 **`expires_at`**，不是列名 `expiration`。启动检查所需列名/类型、value 非空约束及 key 主键；已有不兼容表返回 `Schema`，不静默迁移或重建。`created_at` 是原协议结构的一部分；写入使用原来的 `INSERT OR REPLACE`，因此替换会重建该时间。无 D1 的其他统计/短链表和索引。
+这里的 expiration 实际名为 **`expires_at`**，不是 `expiration`。启动检查所需列名/类型、value 非空约束及 key 主键；已有不兼容表返回 `Schema`，不静默迁移或重建。`created_at` 是原协议结构的一部分；KV 写入使用原 `INSERT OR REPLACE`，替换会重建该时间。Storage 初始化只建 KV；记录/短链 repository 在同一连接上创建各自独立表和索引，不能把它们误称为旧 D1 数据已迁移。
 
 过期判断完全保留 `.scratch/baseline/readable.js:3486`：
 
@@ -67,6 +75,8 @@ expires_at > 0 && expires_at < floor(now_in_seconds)
 - `:memory:`、SQLite 内存 URI（如 `file::memory:`、`file:name?mode=memory&cache=shared`）与空路径临时数据库保留 SQLite 行为，不预创建字面路径文件。Unix 磁盘数据库仅接受普通文件路径；磁盘 `file:` URI 返回静态 `Database` 错误，避免 URI 实际目标与预创建路径不一致而绕过保护。非 Unix 平台保留原有 SQLite 打开行为，不承诺 POSIX 0600。
 - 本模块不启用 WAL，也不更改已有数据库的 journal mode。SQLite 默认 Unix VFS 新建 rollback journal、WAL 和共享内存（`-shm`）文件时通常复制主数据库的权限；此路径下 SQLite 可通过 `fchmod` 消除 umask 的影响，**不能依靠更严格 umask 自动收紧旧宽权限库的 sidecar**。因此 0600 新库有助于保护新建 sidecar，但本模块并不逐个创建或 chmod 这些文件。已有 sidecar、旧宽权限数据库、其他 VFS、ACL 和临时文件均不能据此宣称统一受 0600 保障。不要在连接存活时手工删除 journal/WAL；备份、复制和权限审计应涵盖必要的 sidecar。
 - 数据库父目录应由受信任用户控制（建议 Unix 0700），避免其他用户替换路径或放置符号链接；这里不是对恶意可写目录的路径竞态防护。0600 也不防御同 UID、管理员、备份泄漏或未受控 ACL，不替代应用密钥管理或凭据安全设计。
+
+本轮刻意不对旧数据库/sidecar 强制 chmod，也不因新默认并发而重置 session/授权或覆盖保存设置。8789 `test-e897dd1e919a` 切换 `quick_check=ok`、全部表内容一致已由主代理验证，无 DB reset/restore/登录/session 替换，8788 不变；真实列表的后续 stats/history 增量与切换一致检查分开报告，见 [TEST_DEPLOYMENT](TEST_DEPLOYMENT.md)。管理员 session 尚未绑定当前配置版本，仍需后续单独设计和迁移授权。本轮文档整理不读取真实 DB/private 凭据、不部署、不迁移旧数据。
 
 ## AES KV 兼容范围与安全边界
 

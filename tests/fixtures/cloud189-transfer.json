@@ -1,0 +1,29 @@
+{
+  "source_sha256": "47e2a84566ffa338a420113818a4bb629d3a43f4290dd65547c52b4cfe23f118",
+  "epoch": 1700000000123,
+  "credentials": {"cookie_login_user":"offline-user","sson":"offline-sson","session_key":"offline-key","session_secret":"offline-secret"},
+  "missing_methods": ["batchSaveShare","createFolder","checkTaskStatus","move","moveFile"],
+  "wire": {
+    "web_signature": "6584a1daebbcc248967ecb5dba6fc139",
+    "delete_signature": "17a1332fd78f0918c9d8495e21126824cf347e7c",
+    "delete_suffix": "clientType=TELEPC&version=6.2&channelId=web_cloud.189.cn&rand=25000_2500000000",
+    "utf8_save_body": "type=SHARE_SAVE&taskInfos=%5B%7B%22fileId%22%3A%22source%22%2C%22fileName%22%3A%22%E8%A7%86%E9%A2%91+%26+%3D.mkv%22%2C%22isFolder%22%3A0%7D%5D&targetFolderId=isolated&shareId=share"
+  },
+  "vectors": [
+    {"name":"save-single","op":"saveShareFile","args":["share","source","视频 & =.mkv","isolated"],"steps":[{"res_code":0,"taskId":"task"}],"expected":"task"},
+    {"name":"save-string-code-rejected","op":"saveShareFile","args":["share","source","video.mkv","isolated"],"steps":[{"res_code":"0","taskId":"task"}],"expected":null},
+    {"name":"save-no-task-id","op":"saveShareFile","args":["share","source","video.mkv","isolated"],"steps":[{"res_code":0}],"expected":null},
+    {"name":"task-complete","op":"checkBatchTask","args":["task"],"steps":[{"res_code":0,"taskStatus":3}],"expected":{"success":true,"data":{"res_code":0,"taskStatus":3}}},
+    {"name":"task-string-status-pending","op":"checkBatchTask","args":["task"],"steps":[{"res_code":0,"taskStatus":"3"}],"expected":{"success":false,"error":"任务进行中","status":"3"}},
+    {"name":"task-failure","op":"checkBatchTask","args":["task"],"steps":[{"res_code":0,"taskStatus":3,"errorCode":"QuotaExceeded"}],"expected":{"success":false,"error":"QuotaExceeded"}},
+    {"name":"task-string-code-rejected","op":"checkBatchTask","args":["task"],"steps":[{"res_code":"0","taskStatus":3,"res_message":"offline failure"}],"expected":{"success":false,"error":"offline failure"}},
+    {"name":"delete-single","op":"deleteFile","args":["saved"],"steps":[{"res_code":0}],"expected":true},
+    {"name":"delete-string-code-rejected","op":"deleteFile","args":["saved"],"steps":[{"res_code":"0"}],"expected":false},
+    {"name":"get-root","op":"getRootDirectory","args":["web-key"],"steps":[{"res_code":0,"fileId":"root"}],"expected":{"res_code":0,"fileId":"root"}},
+    {"name":"save-download-success","op":"saveAndDownload","args":["share","source","video.mkv"],"steps":[{"sessionKey":"web-key"},{"res_code":0,"taskId":"task"},{"res_code":0,"taskStatus":3},{"fileDownloadUrl":"//offline.invalid/video?a=1&amp;b=2"},{"res_code":0}],"expected":"https://offline.invalid/video?a=1&b=2","sleeps":[2000],"deletes":1},
+    {"name":"save-download-failure-leaks-in-original","op":"saveAndDownload","args":["share","source","video.mkv"],"steps":[{"sessionKey":"web-key"},{"res_code":0,"taskId":"task"},{"res_code":0,"taskStatus":3},{"res_code":1}],"expected":null,"sleeps":[2000],"deletes":0},
+    {"name":"save-delete-failure-still-url-in-original","op":"saveAndDownload","args":["share","source","video.mkv"],"steps":[{"sessionKey":"web-key"},{"res_code":0,"taskId":"task"},{"res_code":0,"taskStatus":3},{"fileDownloadUrl":"https://offline.invalid/video"},{"res_code":1}],"expected":"https://offline.invalid/video","sleeps":[2000],"deletes":1},
+    {"name":"save-task-failure","op":"saveAndDownload","args":["share","source","video.mkv"],"steps":[{"sessionKey":"web-key"},{"res_code":0,"taskId":"task"},{"res_code":0,"taskStatus":1,"errorCode":"QuotaExceeded"}],"expected":null,"sleeps":[2000],"deletes":0},
+    {"name":"save-poll-limit","op":"saveAndDownload","args":["share","source","video.mkv"],"steps":[{"sessionKey":"web-key"},{"res_code":0,"taskId":"task"}],"repeat_pending":15,"expected":null,"sleeps":[2000,2000,2000,2000,2000,2000,2000,2000,2000,2000,2000,2000,2000,2000,2000],"deletes":0}
+  ]
+}

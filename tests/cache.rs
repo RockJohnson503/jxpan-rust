@@ -485,3 +485,50 @@ async fn panic_does_not_poison_cache_or_leave_live_flight() {
         1
     );
 }
+
+#[tokio::test]
+async fn provenance_separates_ready_hits_and_joined_failures() {
+    use jxpan_rust::cache::CacheSource;
+    let cache = BoundedTtlCache::new(config());
+    let gate = Arc::new(AtomicUsize::new(0));
+    let load_gate = gate.clone();
+    let mut leader = Box::pin(cache.get_or_init_with_source(
+        "fail".into(),
+        move || async move {
+            future::poll_fn(|_| {
+                if load_gate.load(Ordering::SeqCst) == 1 {
+                    Poll::Ready(false)
+                } else {
+                    Poll::Pending
+                }
+            })
+            .await
+        },
+        |_| None,
+    ));
+    assert!(poll_once(leader.as_mut()).is_pending());
+    let mut joined = Box::pin(cache.get_or_init_with_source(
+        "fail".into(),
+        || async { panic!("duplicate loader") },
+        |_| None,
+    ));
+    assert!(poll_once(joined.as_mut()).is_pending());
+    gate.store(1, Ordering::SeqCst);
+    let (first, source) = leader.await.unwrap();
+    assert_eq!(source, CacheSource::Loaded);
+    let (other, source) = joined.await.unwrap();
+    assert_eq!(source, CacheSource::Joined);
+    assert!(Arc::ptr_eq(&first, &other));
+    assert!(!*other);
+    assert!(cache.get("fail").is_none());
+    let (_, source) = cache
+        .get_or_init_with_source("ok".into(), || async { true }, |_| Some(1))
+        .await
+        .unwrap();
+    assert_eq!(source, CacheSource::Loaded);
+    let (_, source) = cache
+        .get_or_init_with_source("ok".into(), || async { panic!("ready miss") }, |_| Some(1))
+        .await
+        .unwrap();
+    assert_eq!(source, CacheSource::Hit);
+}

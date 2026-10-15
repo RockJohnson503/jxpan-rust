@@ -1,91 +1,70 @@
-# 移动云盘只读业务编排与离线差分
+# 移动云盘只读业务编排、完整性与差分
 
 ## 范围与接入
 
-`src/providers/mcloud_service.rs` 复用现有 `mcloud`、`MobileCloudClient` 与共享 `tree::{walk,nested_tree,Walk}`。不实现登录、续期、转存、删除、凭证持久化或缓存。只有列目录及请求下载地址两种只读网络操作；下载地址作为 JSON 数据返回，不访问下载地址。
+`src/providers/mcloud_service.rs` 已由 provider 模块导出并接入 HTTP，复用 `MobileCloudClient` 和共享 `tree::{walk_complete,nested_tree_complete,Walk}`。业务层只列目录、请求公开分享下载地址；不登录、续期、转存、删除或保存凭据。授权、缓存、历史和 HTTP 302 由外层接线；返回直链不 fetch 下载正文。当前状态见 [STATUS](STATUS.md)。
 
-为遵守本任务“只新增四个文件，不改 shared 文件”的约束，**尚未修改 `src/providers/mod.rs`，未接入 HTTP 路由**。集成测试通过 `#[path]` 编译同一份业务实现。主代理接入时需自行注册模块。
+主要入口：
 
-生产入口：
+- `parse(client, config, share_url, pwd, fid_chain, file_id) -> Value`。
+- `parse_indexed(...) -> (Value, Option<(String, Vec<String>)>)`，参数同 parse；一次 Walk 同时给出结果及真实目录索引。
+- `parse_with_fid_chain(client, link_id, pwd, fid_chain, file_id) -> Value`，专门子目录 action 的最后目录列表，不是完整树入口。
+- `ServiceConfig { enabled, authorization_configured }` 从同一授权快照取得；禁用优先 503，未配置 401，再检查链接。配置非空不证明上游认证有效。
 
-```rust
-pub struct ServiceConfig {
-    pub enabled: bool,
-    pub authorization_configured: bool,
-}
+`parse_mcloud_subfolder` 的 file_id 分支由路由转到普通 indexed 定位；无目标文件的目录 action 走 fid-chain 列表。client 必须固定供应商端点、正常 TLS 验证、禁止任意重定向，不把输入分享 URL 当作 HTTP endpoint。测试仅有 cfg(test) loopback seam。
 
-pub async fn parse(
-    client: &MobileCloudClient,
-    config: ServiceConfig,
-    share_url: &str,
-    pwd: &str,
-    fid_chain: &[String],
-    file_id: &str,
-) -> serde_json::Value;
+## 当前生产行为
 
-pub async fn parse_with_fid_chain(
-    client: &MobileCloudClient,
-    link_id: &str,
-    pwd: &str,
-    fid_chain: &[String],
-    file_id: &str,
-) -> serde_json::Value;
-```
+| 路线 | 行为与完整性 |
+| --- | --- |
+| 根只有一个文件，且无 fid/file ID | 完整根列表成功后返回原首页 list 字段；download_url=null，不预取直链；不运行整树，目录索引为 None |
+| 多项/包含目录或需要定位 | 从 root 运行 walk_complete；首次 root 列表直接复用，不再请求一次 root |
+| 普通 fid | 完整 Walk 后仅投影最后 fid 的子树；缺失返回 404，不回退根目录 |
+| 普通 file ID | 在同一个完整 Walk 的原始文件索引定位，不再深度 8 DFS/首次匹配；目标目录 400，不存在 404；失败的其它子目录也不能被忽略 |
+| 定位文件后的下载 | 用该上游文件 ID 请求下载地址；失败受控 502，不返回 download_url=null 的假成功 |
+| 专门 fid-chain 列表 | 使用最后 fid（无 fid 为 root）的完整分页列表，规范化并返回 folder/list、current/parent 字段；不是证明整条父子链或整个分享已完整遍历 |
 
-现有客户端凭证字段私有，也没有 enabled 配置，因此 `parse` 显式接收两个配置门禁布尔值，不重复传递或保存凭证。调用者必须从同一份配置产生这两个布尔值，`authorization_configured` 对应原类的 authorization 非空判断，**不是认证是否成功**。禁用优先返回 503，未配置返回 401，再校验分享链接。已配置但认证/列表请求失败按原行为表现为分享为空的 404，不改成 401。
+生产列表使用 `list_files_checked`，不将 transport/解密/JSON/上游失败折叠成 `[]`。根/子目录读取失败是 502；树 metadata/限额错误有明确错误响应，没有部分成功 tree。`tree_complete:true` 只在该路线实际完整完成后输出，不从旧 `have_page:false` 推导。
 
-`parse_with_fid_chain` 接收已提取的 link ID，和原类方法一样不自行执行 enabled/auth/link 门禁；它是专门的子目录 action，不是 `parse` 的 fid 分支。接入路由需在适当位置做配置门禁。
+### 大小、类型与重名
 
-客户端必须使用正常 TLS 验证和 `reqwest::redirect::Policy::none()` 或固定主机的重定向策略。业务层不增加 endpoint setter，不将输入分享 URL 用作 HTTP 请求地址。客户端限制固定主机的责任仍在现有 `MobileCloudClient`。
+- 完整树及 list 的字节大小取上游非 null 字段，未知 **null**，真实 0 有效；非负整数字节数大于 `2^53-1` 用字符串，合法十进制字符串保留为字符串；非法 metadata 不能默默造 0。
+- 目录类型不复用 JS truthiness，字符串 `"0"`/`"false"` 不是目录。
+- `nested_tree_complete` 保留 `{id,size}` 文件叶子形状，但重名不覆盖：ID 后缀仍冲突就继续加序号。
+- 文件/目录 ID 在全次 Walk 中唯一；重复、跨父目录重复、类型碰撞、根回环拒绝。目录索引来自真实 root 和 all_folders，不从名称树反推，完成之前不发布部分索引。
 
-## 返回行为
+## 并发与硬边界
 
-- 根目录只有一个文件：返回 `folder: []`、`list: [...]`、`tree_complete: true` 等原类完整字段，`download_url: null`，不预取下载地址。
-- 多文件/包含文件夹：4 并发、400 节点的共享 walker，返回 `data.tree` / `data.sid`；采用共享 walker 自身的字段优先级和分类，不用移动解析器分类替换它。
-- `parse` 的 fid：只使用最后一个 fid 定位已经遍历的 tree。缺失 fid 保留原类特殊行为——节点可回退 root，但 nested tree 仍按请求 ID 构建。
-- `parse` 的 file ID：优先于 fid；从 root 顺序 DFS，深度 0–8 可访问，深度 9 不访问；visited 防重复/循环，第一次匹配获胜。
-- 文件 ID 实际是目录：分别保留普通 file-ID 与子目录 action 的两个不同 400 文案。
-- 单文件详情只使用 `path || coPath` 获取下载地址；没有路径不以 ID 补请求；下载失败返回 `download_url: null`。
-- `parse_with_fid_chain` 逐项加载 fid，支持完整目录列表、父目录字段、层级失败、文件夹误作文件、未命中文案及 `available_files` 中 undefined 字段省略。
-- filesize 遵循原 `formatFileSize` 的 parseInt / 单位 / 两位小数；无效数值为 `NaN B`；整数前缀、hex、科学计数法阈值及精确 halfway 向上舍入已纳入差分。
-- 传输错误被折叠为原类的空列表或 null；不输出原始错误、token、密码、URL 正文或响应正文。用户提供的文件/目录 ID 和原类 `available_files` 仍保留。
+后台 `get_parse_settings` / `set_parse_settings`：整数 **1–16**，默认 **4**，`rust_parse_settings` 无 TTL；缺设置启动不写 KV。SQLite 已接收的更新在 HTTP 取消后仍写入并串行发布，写失败不发布。详见 [PARSE_SETTINGS](PARSE_SETTINGS.md)。
 
-## 根目录请求优化：有数据的等价边界
+- 每次完整 walk 固定调度并发快照，`FuturesUnordered` 滚动补位，不等待慢兄弟目录组成整批。
+- 天翼/移动公开分享 I/O 共用动态预算，从 send 前占用至完整 body 完成/错误/取消；调小不打断旧请求，调大唤醒等待者；auth 刷新和 QR 客户端未纳入。
+- 完整 walk：**10,000 目录（含根）、20,000 entries、8 MiB 保留估算、96 层（根为 1）**，任一上限先触发即报错，不截断成功；字节估算不是 RSS 上限。
+- 每个目录：**200/页、最多 100 页、累计 4 MiB 保留估算 / 20k items；每响应 2 MiB**。caLength/coLength 分别核对 ca/co total；不用 nodNum 作总数。opaque nextPageCursor 下一页原样传递，重复 cursor、重叠 ID/页、总量变化、不推进或超限报错。
+- **真实 >200 项分享与 cursor 契约尚未实机验证**。离线请求字段断言不是供应商分页验收。
 
-原类先获取根目录判断单文件/目录，再在 `parseMcloudTree` 内重复获取 root。本实现把首个 root 列表交给 walker callback，其他目录仍按 walker 请求；不跨请求缓存，不锁 await，不 spawn。
+所有 futures 属于当前请求，取消/失败时释放；不 spawn 永久后台遍历，不持 std lock 跨网络 await。外层另有限制：HTTP 64 准入、参数/body 15 秒、handler 150 秒、parse 120 秒。
 
-离线 oracle **先执行未经改写的精确原类与共享 walker**，再用相同内存 graph 做首个 root 列表复用实验，断言完整返回 JSON 相同且每个受影响案例只减少一个列表调用。125 个案例中有 **22 个案例各节省 1 次 root 请求**。420 个直接子目录的上限案例：原类 401 次列表调用，本实现 400 次；本实现最高同时 4 个 callback，完整 JSON 相同。
+## 冻结差分与历史结果
 
-等价前提是同一解析期间目录内容稳定；若远端两次 root 响应不同，复用首次快照可能与原类第二次快照不同。本任务没有真实帐号，未测真实延迟或远端变化场景。
+最初 `tools/mcloud-service-vectors.mjs` 从部署基线提取精确原类及共享旧 walker，使用 networkless VM 与 synthetic list/download callback：
 
-## 离线 oracle 与验证
+- worker SHA-256：`47e2a84566ffa338a420113818a4bb629d3a43f4290dd65547c52b4cfe23f118`。
+- class SHA-256：`4c2784a32492b016548fcbf6286a71fd2ca79b995280aeb3eff8d45bba680661`。
+- 组合源码 SHA-256：`fd47bc886e26eb579830d32abc137cd4c1c90c6c67b5671c769c40649cda190b`。
 
-`tools/mcloud-service-vectors.mjs`：
-
-1. 校验 `.scratch/baseline/_worker.js` SHA-256 为
-   `47e2a84566ffa338a420113818a4bb629d3a43f4290dd65547c52b4cfe23f118`。
-2. 从 `readable.js` AST 提取精确 `MobileCloudParser`、`formatFileSize`、`jxpanWalkDirTree` 和 `jxpanBuildNestedTree`；校验提取的 class 与 `MobileCloudParser.js` 字节一致（忽略文件末尾空白）。
-3. VM 的 fetch 是严格拒绝 stub；没有真实帐号、网络、文件写回或计时任务；console 被静音，原类私密日志不会被打印。原类网络方法替换为 synthetic 内存 list/download callback，仅验证业务编排，不冒充 HTTP 协议测试。
-4. 原类缓存 get 固定 miss，set 无操作；固定 Date。生成 JSON 只写 stdout，不落盘 fixture。
-
-原 class hash：`4c2784a32492b016548fcbf6286a71fd2ca79b995280aeb3eff8d45bba680661`。
-组合源码 hash：`fd47bc886e26eb579830d32abc137cd4c1c90c6c67b5671c769c40649cda190b`。
-
-`tests/mcloud_service.rs` 每次运行实时执行原源码 oracle，无旧 fixture 回退；比对每个案例的完整 JSON、列表调用顺序、DFS 顺序、下载 callback 参数与调用次数；用异步 poll callback 验证并发上限和所有回调完成。
+原 125 案例/2 测试与“22 案例少 1 次 root 请求、最高 4 callback、400 节点”是**最初等价实验的历史结果**，不能套用到当前完整性路线。冻结工具/fixture 保持旧行为；现在允许纠正旧 bug，缺 fid、错误吞空、深度/截断、重复 ID、大小与 path/coPath 等差异需要独立断言，不能改 oracle 伪称逐字等价。
 
 ```sh
-node tools/mcloud-service-vectors.mjs --summary
-cargo test --test mcloud_service -- --nocapture
+cargo test --locked --offline --test mcloud_service --test mcloud_http --test tree_complete -j 2
+# 以下开关只重跑本地冻结 Node VM，不请求云盘：
+JXPAN_LIVE_ORACLE=1 cargo test --locked --offline --test mcloud_service -j 2
 ```
 
-需要 Node、`tools/node_modules/acorn` 及本地私有 `.scratch/baseline`。未提供 baseline 的环境会明确失败，不会跳过后声称通过。
+Node oracle 需要现有本地 baseline 与 acorn；缺失时明确失败，不能跳过后声称通过。此处列复现命令，不宣称本轮全套测试已通过；主流程仍需完成最终重测/部署验收。
 
-本次执行结果：**125 个原类离线 JSON 案例通过，2 个 Rust 测试通过**。覆盖多层/空/单文件、未配置/禁用/无效链接、认证列表失败、错误 file ID/目录、重复名、fid 链、字段优先级、path/coPath、下载失败、深度 8/9 边界、visited 循环、子节点失败、400 节点上限及 32 组固定种子 DAG（分别测 tree 和 file ID）。
+## 未完成与审查边界
 
-## 明确未覆盖与接入注意
+授权/缓存/记录已在外层接线，不再标成“未导出/由主代理将来接入”。刷新 Err 不保留 ready cache，移动原有一小时失败退避保留；缓存 TTL/账号 revision 隔离见 [CACHE](CACHE.md)。
 
-- 不声称全输入域等价：尚未差分所有 malformed/null/primitive 列表行、特殊对象键（尤其 `__proto__`）、超长 hex 数值和任意 JS 非字符串字段。共享 walker 对循环 nested tree 的安全行为不是原递归实现的无限递归行为；这里只对 file-ID DFS 执行循环案例。
-- 未执行原类缓存 hit 分支；业务层按要求无缓存，TTL 应由主代理单独实现。
-- 未测试真实云盘、真实认证、HTTP/AES 协议、登录/续期。生产 adapter 本次编译验证，实际业务通过同一核心的 callback seam 差分验证。
-- 原 `parse` 在 authorization 非空但解码账号为空时会设 `account = "default"`。当前 `MobileCloudClient` 的私有 account 在这种情况下返回空列表，业务层无权限修正；普通 synthetic 非空账号覆盖通过，但**这项生产适配差异需主代理在共享客户端层决定如何处理**。
-- 无任意 URL setter、持久化或业务缓存；模块注册、路由和有界 TTL 缓存不属于这四文件的修改范围。
+2026-10-14 两 MP4 的正确 metadata 与 302 是历史实机结果；该轮未跟随到 CDN。本轮完整性/分页尚未部署，不声称真实大分享、真人扫码/续期、完整场景矩阵、CDN 播放或同环境性能已通过。后台 session 未绑定当前配置版本、旧 DB 权限不强改，属于本轮保护线上状态的保留边界；不是将活动 session/已有数据静默重置后宣称审查完成。

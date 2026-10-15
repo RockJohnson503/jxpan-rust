@@ -60,6 +60,14 @@ pub struct CacheStats {
     pub in_flight: usize,
 }
 
+/// How a caller obtained its response; a joined failure is not a successful cache hit.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CacheSource {
+    Hit,
+    Joined,
+    Loaded,
+}
+
 /// Clones share the same cache and in-flight registry. No locks span an await.
 pub struct BoundedTtlCache<V> {
     inner: Arc<Inner<V>>,
@@ -207,21 +215,38 @@ impl<V: Send + Sync + 'static> BoundedTtlCache<V> {
         Fut: Future<Output = V> + Send + 'static,
         W: FnOnce(&V) -> Option<usize> + Send + 'static,
     {
+        self.get_or_init_with_source(key, load, cache_weight)
+            .await
+            .map(|(value, _)| value)
+    }
+
+    /// The same bounded loader, with provenance for request statistics.
+    pub async fn get_or_init_with_source<F, Fut, W>(
+        &self,
+        key: String,
+        load: F,
+        cache_weight: W,
+    ) -> Result<(Arc<V>, CacheSource), CacheError>
+    where
+        F: FnOnce() -> Fut + Send + 'static,
+        Fut: Future<Output = V> + Send + 'static,
+        W: FnOnce(&V) -> Option<usize> + Send + 'static,
+    {
         if key.len() > self.inner.config.max_key_bytes {
             return Err(CacheError::KeyTooLarge);
         }
         // A short key with a huge reserved String capacity must not retain that buffer.
         let key = key.into_boxed_str().into_string();
-        let flight = {
+        let (flight, source) = {
             let now = Instant::now();
             let mut state = self.inner.state.lock().expect("cache mutex poisoned");
             state.prune(now);
             if let Some(entry) = state.entries.get_mut(&key) {
                 entry.accessed_at = now;
-                return Ok(Arc::clone(&entry.value));
+                return Ok((Arc::clone(&entry.value), CacheSource::Hit));
             }
             if let Some(flight) = state.flights.get(&key).and_then(Weak::upgrade) {
-                flight
+                (flight, CacheSource::Joined)
             } else {
                 if state.active.len() >= self.inner.config.max_in_flight {
                     return Err(CacheError::InFlightLimit);
@@ -270,12 +295,12 @@ impl<V: Send + Sync + 'static> BoundedTtlCache<V> {
                 let flight = Arc::new(Flight { identity, future });
                 state.flights.insert(key, Arc::downgrade(&flight));
                 state.active.push(Arc::downgrade(&flight));
-                flight
+                (flight, CacheSource::Loaded)
             }
         };
         let value = flight.future.clone().await;
         drop(flight);
-        Ok(value)
+        Ok((value, source))
     }
 
     /// Detach any active load. Existing waiters still receive its result, but it
@@ -309,6 +334,43 @@ impl<V: Send + Sync + 'static> BoundedTtlCache<V> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn app_download_cache_matches_legacy_ten_minute_ttl_and_budgets() {
+        let storage = crate::storage::Storage::open(":memory:", 16).await.unwrap();
+        let app = crate::http::AppState::new(storage, serde_json::json!({}), "", "")
+            .await
+            .unwrap();
+        let download = app.download_cache.inner.config;
+        assert_eq!(download.ttl, Duration::from_secs(600));
+        assert_eq!(download.max_entries, 64);
+        assert_eq!(download.max_bytes, 256 * 1024);
+        assert_eq!(download.max_key_bytes, 64);
+        assert_eq!(download.max_in_flight, 8);
+        assert_eq!(app.parse_cache.inner.config.ttl, Duration::from_secs(600));
+        assert_eq!(app.parse_cache.inner.config.max_bytes, 8 * 1024 * 1024);
+        assert_eq!(app.directories.inner.config.ttl, Duration::from_secs(600));
+        assert_eq!(app.directories.inner.config.max_bytes, 256 * 1024);
+
+        // Exercise the actual AppState configuration with a deterministic clock.
+        // No real waiting, credential files, HTTP requests, or provider operations.
+        let cache = BoundedTtlCache::<u8>::new(download);
+        let start = Instant::now();
+        {
+            let mut state = cache.inner.state.lock().unwrap();
+            state.insert(download, "synthetic".into(), Arc::new(1), 1, start);
+            state.prune(start + Duration::from_secs(61));
+            assert!(state.entries.contains_key("synthetic"));
+            state.prune(start + Duration::from_millis(599_999));
+            assert!(state.entries.contains_key("synthetic"));
+            state.entries.get_mut("synthetic").unwrap().accessed_at =
+                start + Duration::from_millis(599_999);
+            state.prune(start + Duration::from_secs(600));
+            assert!(state.entries.is_empty());
+            assert_eq!(state.bytes, 0);
+        }
+        app.close().await.unwrap();
+    }
 
     fn config() -> CacheConfig {
         CacheConfig {

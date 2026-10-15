@@ -9,4 +9,7 @@
 /.scratch/
 __pycache__/
 *.py[cod]
+/jxpan.sqlite
+/jxpan.sqlite-*
+/tools/cloud189-owned-offline/
 .DS_Store

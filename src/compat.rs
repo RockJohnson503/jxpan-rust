@@ -43,6 +43,55 @@ pub(crate) fn decode_uri_component(input: &str) -> Option<String> {
     String::from_utf8(bytes).ok()
 }
 
+/// JavaScript encodeURIComponent: preserve its ASCII punctuation, encode UTF-8 bytes.
+pub fn encode_uri_component(input: &str) -> String {
+    use std::fmt::Write;
+    let mut out = String::with_capacity(input.len());
+    for byte in input.bytes() {
+        if byte.is_ascii_alphanumeric() || b"-_.!~*'()".contains(&byte) {
+            out.push(byte as char);
+        } else {
+            write!(&mut out, "%{byte:02X}").expect("String write");
+        }
+    }
+    out
+}
+
+/// JavaScript parseInt with inferred decimal/hex radix; None represents NaN.
+pub fn parse_int(input: &str) -> Option<f64> {
+    let mut s = input.trim_start_matches(|c: char| c.is_whitespace() || c == '\u{feff}');
+    let sign = if let Some(rest) = s.strip_prefix('-') {
+        s = rest;
+        -1.0
+    } else {
+        if let Some(rest) = s.strip_prefix('+') {
+            s = rest;
+        }
+        1.0
+    };
+    let radix = if s.starts_with("0x") || s.starts_with("0X") {
+        s = &s[2..];
+        16
+    } else {
+        10
+    };
+    let digits = s
+        .chars()
+        .take_while(|c| c.is_ascii() && c.is_digit(radix))
+        .count();
+    if digits == 0 {
+        return None;
+    }
+    let value = if radix == 10 {
+        s[..digits].parse::<f64>().unwrap_or(f64::INFINITY)
+    } else {
+        s[..digits].chars().fold(0.0, |n, c| {
+            n * 16.0 + c.to_digit(16).expect("hex digit") as f64
+        })
+    };
+    Some(sign * value)
+}
+
 /// JSON-domain JavaScript String coercion (objects/arrays are not JSON.stringify).
 pub fn js_string(v: &Value) -> String {
     match v {
@@ -111,36 +160,9 @@ fn fixed_two(n: f64) -> String {
 /// readable.js formatFileSize: parseInt (including numeric prefixes and hex), then toFixed(2).
 /// Invalid input is deliberately "NaN B", not "0 B" or "未知大小".
 pub fn format_file_size(size: &Value) -> String {
-    let text = js_string(size);
-    let mut s = text.trim_start_matches(|c: char| c.is_whitespace() || c == '\u{feff}');
-    let sign = if let Some(rest) = s.strip_prefix('-') {
-        s = rest;
-        -1.0
-    } else {
-        if let Some(rest) = s.strip_prefix('+') {
-            s = rest;
-        }
-        1.0
-    };
-    let radix = if s.starts_with("0x") || s.starts_with("0X") {
-        s = &s[2..];
-        16
-    } else {
-        10
-    };
-    let digits: Vec<_> = s
-        .chars()
-        .map_while(|c| c.to_digit(radix).filter(|_| c.is_ascii()))
-        .collect();
-    if digits.is_empty() {
+    let Some(mut size) = parse_int(&js_string(size)) else {
         return "NaN B".into();
-    }
-    let mut size = sign
-        * if radix == 10 {
-            s[..digits.len()].parse::<f64>().unwrap_or(f64::INFINITY)
-        } else {
-            digits.into_iter().fold(0.0, |n, d| n * 16.0 + d as f64)
-        };
+    };
     let units = ["B", "KB", "MB", "GB", "TB"];
     let mut unit = 0;
     while size >= 1024.0 && unit < 4 {

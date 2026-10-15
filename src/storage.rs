@@ -9,6 +9,11 @@ use std::thread::{self, JoinHandle, ThreadId};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::sync::{oneshot, watch};
 
+/// Maximum serialized JSON bytes, also used for legacy plaintext rows.
+pub const MAX_VALUE_BYTES: usize = 2 * 1024 * 1024;
+/// AES block padding plus hex expansion for a maximum-size JSON value.
+pub const MAX_STORED_VALUE_BYTES: usize = (MAX_VALUE_BYTES / 16 + 1) * 32;
+
 pub type Result<T> = std::result::Result<T, StorageError>;
 
 /// Errors contain no keys, values, paths, SQL, or upstream error strings.
@@ -23,6 +28,7 @@ pub enum StorageError {
     Schema,
     InvalidCiphertext,
     InvalidJson,
+    ValueTooLarge,
     InvalidTtl,
     Clock,
     UpdatePanicked,
@@ -39,6 +45,7 @@ impl std::fmt::Display for StorageError {
             Self::Schema => "storage schema incompatible",
             Self::InvalidCiphertext => "storage ciphertext invalid",
             Self::InvalidJson => "storage JSON invalid",
+            Self::ValueTooLarge => "storage value exceeds size limit",
             Self::InvalidTtl => "storage TTL out of range",
             Self::Clock => "storage clock unavailable",
             Self::UpdatePanicked => "storage update callback panicked",
@@ -53,6 +60,9 @@ const KV_KEY: &[u8; 16] = b"LsPro-JxPan\0\0\0\0\0";
 /// Encrypt an already serialized JSON string exactly as the frozen JS implementation.
 /// Callers comparing ciphertext must use the same JSON.stringify byte representation.
 pub fn encrypt_json_text(json: &str) -> Result<String> {
+    if json.len() > MAX_VALUE_BYTES {
+        return Err(StorageError::ValueTooLarge);
+    }
     serde_json::from_str::<Value>(json).map_err(|_| StorageError::InvalidJson)?;
     let mut bytes = json.as_bytes().to_vec();
     let padding = 16 - bytes.len() % 16;
@@ -73,12 +83,31 @@ pub fn encrypt_json_text(json: &str) -> Result<String> {
 }
 
 pub fn encrypt_for_kv(value: &Value) -> Result<String> {
-    let text = serde_json::to_string(value).map_err(|_| StorageError::InvalidJson)?;
+    // Serialize into a bounded buffer; do not first allocate an oversized string.
+    struct JsonBuffer(Vec<u8>);
+    impl std::io::Write for JsonBuffer {
+        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+            if bytes.len() > MAX_VALUE_BYTES - self.0.len() {
+                return Err(std::io::Error::other("storage value exceeds size limit"));
+            }
+            self.0.extend_from_slice(bytes);
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+    let mut buffer = JsonBuffer(Vec::new());
+    serde_json::to_writer(&mut buffer, value).map_err(|_| StorageError::ValueTooLarge)?;
+    let text = String::from_utf8(buffer.0).map_err(|_| StorageError::InvalidJson)?;
     encrypt_json_text(&text)
 }
 
 /// Valid legacy ciphertext is compatible; malformed hex/padding is rejected more strictly.
 pub fn decrypt_from_kv(hex: &str) -> Result<Value> {
+    if hex.len() > MAX_STORED_VALUE_BYTES {
+        return Err(StorageError::ValueTooLarge);
+    }
     if hex.is_empty() || !hex.len().is_multiple_of(32) {
         return Err(StorageError::InvalidCiphertext);
     }
@@ -110,6 +139,9 @@ pub fn decrypt_from_kv(hex: &str) -> Result<Value> {
         return Err(StorageError::InvalidCiphertext);
     }
     bytes.truncate(bytes.len() - padding);
+    if bytes.len() > MAX_VALUE_BYTES {
+        return Err(StorageError::ValueTooLarge);
+    }
     // JS TextDecoder is replacement-based; valid JSON payloads are UTF-8 already.
     let text = String::from_utf8(bytes).map_err(|_| StorageError::InvalidCiphertext)?;
     serde_json::from_str(&text).map_err(|_| StorageError::InvalidJson)
@@ -226,6 +258,16 @@ impl Storage {
             })?;
         }
         reply_rx.await.map_err(|_| StorageError::WorkerFailed)?
+    }
+
+    /// Execute a repository operation on the existing bounded SQLite worker.
+    /// The callback must be synchronous and must not re-enter this worker.
+    pub async fn with_connection<T, F>(&self, operation: F) -> Result<T>
+    where
+        T: Send + 'static,
+        F: FnOnce(&mut Connection) -> Result<T> + Send + 'static,
+    {
+        self.command(operation).await
     }
 
     pub async fn get(&self, key: &str) -> Result<Option<Value>> {
@@ -460,21 +502,36 @@ fn delete_value(db: &Connection, key: &str) -> Result<()> {
     Ok(())
 }
 fn read_value(db: &Connection, key: &str, now: i64) -> Result<Option<Value>> {
-    let row: Option<(String, Option<i64>)> = db
+    let row: Option<(Option<i64>, Option<String>)> = db
         .query_row(
-            "SELECT value, expires_at FROM kv_store WHERE key = ?1",
-            [key],
-            |row| Ok((row.get(0)?, row.get(1)?)),
+            // SQLite byte length (not text character count) gates the projection
+            // before rusqlite can copy the field into a Rust String. Plain JSON
+            // and padded hex ciphertext have the same limits as the writer.
+            "SELECT expires_at, CASE WHEN length(CAST(value AS BLOB)) <=
+             CASE WHEN substr(value, 1, 1) IN ('{', '[') THEN ?2 ELSE ?3 END
+             THEN value ELSE NULL END FROM kv_store WHERE key = ?1",
+            params![key, MAX_VALUE_BYTES, MAX_STORED_VALUE_BYTES],
+            |row| {
+                let expires_at: Option<i64> = row.get(0)?;
+                // Preserve legacy expiry cleanup without materializing the value.
+                let raw = if expires_at.is_some_and(|expiry| expiry > 0 && expiry < now) {
+                    None
+                } else {
+                    row.get(1)?
+                };
+                Ok((expires_at, raw))
+            },
         )
         .optional()
         .map_err(|_| StorageError::Database)?;
-    let Some((raw, expires_at)) = row else {
+    let Some((expires_at, raw)) = row else {
         return Ok(None);
     };
     if expires_at.is_some_and(|expiry| expiry > 0 && expiry < now) {
         delete_value(db, key)?;
         return Ok(None);
     }
+    let raw = raw.ok_or(StorageError::ValueTooLarge)?;
     if raw.is_empty() {
         return Ok(None);
     }
@@ -595,6 +652,31 @@ mod tests {
         while !*done.borrow_and_update() {
             done.changed().await.unwrap();
         }
+    }
+
+    #[test]
+    fn ciphertext_within_hex_limit_cannot_exceed_json_byte_limit() {
+        let value = json!("x".repeat(MAX_VALUE_BYTES - 2));
+        let mut encrypted = encrypt_for_kv(&value).unwrap();
+        assert_eq!(encrypted.len(), MAX_STORED_VALUE_BYTES);
+        // The boundary value has a full padding block. Replace that block with
+        // one JSON whitespace byte plus valid padding: hex length stays the same
+        // but decoded serialized JSON is now one byte over the writer's limit.
+        let mut block = Block::<Aes128>::default();
+        block.fill(15);
+        block[0] = b' ';
+        Aes128::new_from_slice(KV_KEY)
+            .unwrap()
+            .encrypt_block(&mut block);
+        encrypted.truncate(encrypted.len() - 32);
+        for byte in block {
+            use std::fmt::Write;
+            write!(&mut encrypted, "{byte:02x}").unwrap();
+        }
+        assert_eq!(
+            decrypt_from_kv(&encrypted),
+            Err(StorageError::ValueTooLarge)
+        );
     }
 
     #[test]

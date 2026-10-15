@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Params {
     query: HashMap<String, String>,
     form: HashMap<String, String>,
@@ -29,6 +29,9 @@ impl Params {
         }
     }
 
+    pub(crate) fn apply_field(&mut self, name: String, value: String) {
+        self.form.insert(name, value);
+    }
     pub fn get(&self, name: &str) -> &str {
         self.form
             .get(name)

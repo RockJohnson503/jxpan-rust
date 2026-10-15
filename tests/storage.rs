@@ -6,7 +6,10 @@ use rusqlite::{Connection, params};
 use serde_json::{Value, json};
 use std::path::PathBuf;
 use std::sync::mpsc;
-use storage::{Storage, StorageError, Update, decrypt_from_kv, encrypt_for_kv, encrypt_json_text};
+use storage::{
+    MAX_STORED_VALUE_BYTES, MAX_VALUE_BYTES, Storage, StorageError, Update, decrypt_from_kv,
+    encrypt_for_kv, encrypt_json_text,
+};
 
 struct TempDb(PathBuf);
 impl TempDb {
@@ -201,6 +204,183 @@ async fn roundtrip_persistence_delete_and_legacy_plain_json() {
     );
     assert_eq!(reopened.get("empty").await.unwrap(), None);
     reopened.close().await.unwrap();
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn kv_size_boundaries_match_json_bytes_and_ciphertext_expansion() {
+    let store = Storage::open(":memory:", 16).await.unwrap();
+    let value = json!("界".repeat((MAX_VALUE_BYTES - 2) / 3));
+    let text = serde_json::to_string(&value).unwrap();
+    assert_eq!(text.len(), MAX_VALUE_BYTES);
+    assert!(text.chars().count() < MAX_VALUE_BYTES);
+    let encrypted = encrypt_for_kv(&value).unwrap();
+    assert_eq!(encrypted.len(), MAX_STORED_VALUE_BYTES);
+    assert_eq!(decrypt_from_kv(&encrypted).unwrap(), value);
+    store.put("boundary", value.clone(), None).await.unwrap();
+    assert_eq!(store.get("boundary").await.unwrap(), Some(value));
+
+    // Plain legacy JSON uses the decoded JSON budget, not the larger hex budget.
+    let prefix = r#"{"data":""#;
+    let suffix = r#""}"#;
+    let plain = format!(
+        "{prefix}{}{suffix}",
+        "x".repeat(MAX_VALUE_BYTES - prefix.len() - suffix.len())
+    );
+    assert_eq!(plain.len(), MAX_VALUE_BYTES);
+    let expected: Value = serde_json::from_str(&plain).unwrap();
+    store
+        .with_connection(move |db| {
+            db.execute(
+                "INSERT INTO kv_store (key, value) VALUES ('plain-boundary', ?1)",
+                [plain],
+            )
+            .map(|_| ())
+            .map_err(|_| StorageError::Database)
+        })
+        .await
+        .unwrap();
+    assert_eq!(store.get("plain-boundary").await.unwrap(), Some(expected));
+    store.close().await.unwrap();
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn oversized_reads_are_gated_before_row_get_and_preserve_existing_rows() {
+    let store = Storage::open(":memory:", 16).await.unwrap();
+    let unicode =
+        serde_json::to_string(&json!({"data":"界".repeat(MAX_VALUE_BYTES / 3 + 1)})).unwrap();
+    assert!(unicode.len() > MAX_VALUE_BYTES);
+    assert!(unicode.chars().count() < MAX_VALUE_BYTES);
+    let nul = format!("{{\0{}", "x".repeat(MAX_VALUE_BYTES));
+    store
+        .with_connection(move |db| {
+            db.execute(
+                "INSERT INTO kv_store (key, value) VALUES ('unicode', ?1), ('nul', ?2)",
+                params![unicode, nul],
+            )
+            .map_err(|_| StorageError::Database)?;
+            // A BLOB cannot be row.get::<String>'d. Returning ValueTooLarge rather
+            // than Database proves that SQL withheld the oversized field first.
+            db.execute(
+                "INSERT INTO kv_store (key, value) VALUES ('oversized-blob', zeroblob(?1)),
+             ('oversized-text', CAST(zeroblob(?1) AS TEXT))",
+                [MAX_STORED_VALUE_BYTES + 1],
+            )
+            .map(|_| ())
+            .map_err(|_| StorageError::Database)
+        })
+        .await
+        .unwrap();
+    for key in ["unicode", "nul", "oversized-blob", "oversized-text"] {
+        assert_eq!(
+            store.get(key).await,
+            Err(StorageError::ValueTooLarge),
+            "{key}"
+        );
+        assert_eq!(
+            store
+                .compare_and_swap(key, None, Some(json!(1)), None)
+                .await,
+            Err(StorageError::ValueTooLarge)
+        );
+        assert_eq!(
+            store
+                .update(key, |_| panic!(
+                    "oversized input must not reach the callback"
+                ))
+                .await,
+            Err(StorageError::ValueTooLarge)
+        );
+    }
+    let count = store
+        .with_connection(|db| {
+            db.query_row("SELECT count(*) FROM kv_store", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .map_err(|_| StorageError::Database)
+        })
+        .await
+        .unwrap();
+    assert_eq!(count, 4);
+    assert_eq!(
+        StorageError::ValueTooLarge.to_string(),
+        "storage value exceeds size limit"
+    );
+    store.close().await.unwrap();
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn oversized_writes_fail_before_replacement_and_roll_back_atomic_updates() {
+    let store = Storage::open(":memory:", 16).await.unwrap();
+    let old = json!({"synthetic":true});
+    store.put("existing", old.clone(), None).await.unwrap();
+    let value = json!("x".repeat(MAX_VALUE_BYTES - 1));
+    assert_eq!(encrypt_for_kv(&value), Err(StorageError::ValueTooLarge));
+    assert_eq!(
+        encrypt_json_text(&serde_json::to_string(&value).unwrap()),
+        Err(StorageError::ValueTooLarge)
+    );
+    assert_eq!(
+        store.put("existing", value.clone(), None).await,
+        Err(StorageError::ValueTooLarge)
+    );
+    assert_eq!(
+        store
+            .compare_and_swap("existing", Some(old.clone()), Some(value.clone()), None)
+            .await,
+        Err(StorageError::ValueTooLarge)
+    );
+    assert_eq!(
+        store
+            .update("existing", move |_| Ok(Update::Put {
+                value,
+                ttl_seconds: None
+            }))
+            .await,
+        Err(StorageError::ValueTooLarge)
+    );
+    assert_eq!(store.get("existing").await.unwrap(), Some(old));
+    // JSON escapes count too: the source string itself fits, its serialization does not.
+    assert_eq!(
+        store
+            .put("escaped", json!("\0".repeat(MAX_VALUE_BYTES / 6 + 1)), None)
+            .await,
+        Err(StorageError::ValueTooLarge)
+    );
+    assert_eq!(store.get("escaped").await.unwrap(), None);
+    store.close().await.unwrap();
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn oversized_expired_value_keeps_legacy_cleanup_semantics() {
+    let store = Storage::open(":memory:", 16).await.unwrap();
+    store
+        .with_connection(|db| {
+            db.execute(
+                "INSERT INTO kv_store (key, value, expires_at) VALUES
+             ('expired', zeroblob(?1), 1), ('not-expired', zeroblob(?1), 0)",
+                [MAX_STORED_VALUE_BYTES + 1],
+            )
+            .map(|_| ())
+            .map_err(|_| StorageError::Database)
+        })
+        .await
+        .unwrap();
+    assert_eq!(store.get("expired").await.unwrap(), None);
+    assert_eq!(
+        store.get("not-expired").await,
+        Err(StorageError::ValueTooLarge)
+    );
+    let count = store
+        .with_connection(|db| {
+            db.query_row("SELECT count(*) FROM kv_store", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .map_err(|_| StorageError::Database)
+        })
+        .await
+        .unwrap();
+    assert_eq!(count, 1);
+    store.close().await.unwrap();
 }
 
 #[tokio::test(flavor = "current_thread")]

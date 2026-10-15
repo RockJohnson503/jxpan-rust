@@ -1,8 +1,8 @@
-# 移动云盘：当前部署协议与离线兼容模块
+# 移动云盘：当前实现与冻结协议依据
 
 ## 0. 来源、边界与复现
 
-只依据当前实例 `.scratch/baseline/`，不引用历史副本、抓取网页教程或猜测标准实现。
+冻结协议只依据当时实例导出的 `.scratch/baseline/`，不引用未经核验副本或猜测标准实现。**下方第 1–7 节主要描述冻结 JS，而非当前 Rust 的分页、遍历或授权实现**。移动实现/实测依据本节、[MCLOUD_SERVICE](MCLOUD_SERVICE.md)、[PARSE_SETTINGS](PARSE_SETTINGS.md) 和 [STATUS](STATUS.md)。2026-10-15 最新 8789 发布为 `test-3d1cee097916`，仅变动天翼 client/service 与 HTTP reply，未改移动；下文移动 2260 文件实测仍为 10-14 的历史验收，不冒充本次重新测试。
 
 | 文件 | SHA-256 |
 |---|---|
@@ -19,9 +19,21 @@ node tools/mcloud-vectors.mjs --summary
 cargo test --test mcloud_vectors -- --nocapture
 ```
 
-新增模块仅做离线函数：分享链接识别、Authorization 字节编解码/账号提取/请求头清理、原类 isFolder、当前部署签名内核。没有网络、日志、凭据读写、登录、续期、转存或删除。
+`src/providers/mcloud.rs` 的纯函数部分只做分享识别、Authorization 字节编解码/账号提取/请求头清理、原类 isFolder 与签名内核；网络/分页由 `mcloud_client`、业务完整性由 `mcloud_service`、授权由 `auth`/`mcloud_auth` 管理，均已在根 crate 接线。
 
-依赖要求：`base64 = "0.22"`、`serde_json = "1"`。不要求 url、regex、serde derive、md-5、AES 或 RSA。签名接收 **原样 JSON.stringify 字符串**，因此不要求 serde_json 的 preserve_order；调用者绝不能把有序 JS JSON 重新序列化成另一个顺序后声称同等签名输入。
+最初纯函数研究的依赖为 `base64`、`serde_json`；当前客户端的加密/HTTP 依赖以 Cargo 与源码为准。签名接收原样 JSON.stringify 字符串，不能重排字段后宣称同等签名输入。
+
+### 当前 Rust 的明确修复（不是冻结 JS 等价承诺）
+
+- 后台设置：1–16，代码默认 16；已有合法值优先，缺键不写 KV。10-14 保存 4 为历史观察；2026-10-15 最新只读审计实际保存 **16**，本次全库与切换前相同，没有设置写入；有效值按已验证构造逻辑推断，非授权 endpoint 直接观测，见 `.scratch/cloud189-fix-8789/final-audit.json`。两网盘公开分享 send 至完整 body 共用预算，auth/QR 不在预算内；SQLite 已接收命令取消仍写入并串行发布，失败不发布，详见 [PARSE_SETTINGS](PARSE_SETTINGS.md)。
+- 目录生产入口 `list_files_checked` 分页：每页 200、最多 100 页；每响应 2 MiB，单目录累计 4 MiB 保留估算 / 20k items。使用有序 JSON 序列化安全构造请求，特殊名称/密码不靠字符串 replace 拼 JSON。
+- `caLength` / `coLength` 是对应列表**本页计数**，出现时严格核对本页实际数组，不再按累计 total 判断；`nodNum` 不用于分页。active opaque `nextPageCursor` 原样进入下一页；任一 ca/co 列表满 200 或存在 active cursor 都继续，仅短页且无 cursor 停止，满 200 要再请求尾页。重复 cursor/重叠 ID、空页却声称继续、资源超限仍拒绝，预算不放宽。真实单样本 >200 分页已通过，但完整 cursor/分享矩阵未验收。
+- 多项树及普通指定文件定位走 `walk_complete`，FuturesUnordered 滚动补位，本次 walk 固定并发快照；不再使用 400 节点截断或深度 8 的首次匹配 DFS。任一上游失败、循环、全局重复 ID、畸形 metadata/资源超限，不返回部分成功树。
+- 全树上限 10k 目录（含根）/ 20k entries / 8 MiB 估算 / 96 层；任一先触发即失败。原始目录索引来自同一次 Walk，名称树保证重名唯一。未知 size=null，真实 0 有效，JS 不安全大整数输出字符串，不把 `"0"`/`"false"` 当目录。
+- 单文件根目录仍返回列表且不预取直链；普通文件 ID 必须在完整 Walk 中定位。缺失 fid 404，不回退 root 伪装成功。专门 fid-chain action 是最后目录的完整列表，不承诺整分享树已验证；file_id 分支的路由接线见 MCLOUD_SERVICE。
+- 分享响应优先采用一层标准 CBC/PKCS#7 解密后的完整 JSON；旧公开纯函数/冻结向量仍保留。生产严格列表不把解密/JSON/transport 失败当空目录；失败不留 ready cache。移动授权原有一小时 refresh 失败退避保留，refresh Err 不缓存为可复用结果。
+- 新版本真实大分享 HTTP 200 / JSON code 200 / `tree_complete:true`：7 目录（含 root）、2260 唯一文件、最大直接文件目录 501，旧生产路径曾 `mobile_pagination` 失败。15.124 秒为单次实机验收，非基准；证据 `.scratch/concurrency-fix-8789/real-listing-acceptance.json`。直链仅返回供应商 URL / HTTP 302，不拉正文，本轮没有下载 URL/CDN 请求；历史两 MP4/302 保留，不证明 CDN 播放成功。
+- 两个宽目录样本共 68 次干净并发 walk，完整 fingerprint 跨候选/修复版本一致，峰值真正达到候选；默认 16 为已测七档中的暂定性能选择，不是全供应商最优或长期稳定结论。冷池/共享池方法、外部活动批次排除及各档结果见 [CONCURRENCY_BENCHMARK](CONCURRENCY_BENCHMARK.md)。
 
 ## 1. 字段词典与入口
 
@@ -87,6 +99,8 @@ RSA 实现用随机非零填充、BigInt 模幂，不属于本次 Rust 范围。
 
 `AESUtils2` 使用源码固定 16字符 key（此处不重复其值），AES-CBC，随机 16字节 IV；传输为 base64(IV || 密文)。它先按 **JS 字符串 UTF-16 length** 手动追加填充字符，再 UTF-8 编码，然后 WebCrypto **再次**自动 PKCS#7 填充。解密 WebCrypto 已去一层，又根据末字节裁掉一层。非 ASCII 手动填充长度不等于 UTF-8 字节长度；不能直接实现单层标准 CBC/PKCS#7 视为一致。失败时 encrypt 返回明文、decrypt 返回输入原样。见 `readable.js:10915-10960`。
 
+**2026-10-14 生产响应修正：** 实际供应商目录响应只使用一层标准 CBC/PKCS#7；去掉这一层后已经是完整 JSON。原类再把末尾 `}` 的字节值 125 当作填充长度，误删 125 字节；随后 `coLst` 正则在带 `]` 的 MP4 名称处提前结束，导致非空目录被当作空目录。Rust 生产 `post` 现在优先保留解密后可完整解析的 JSON，否则仍走原双层解码/救援；请求双层填充及公开 `decrypt139` 的冻结兼容语义未改。新增单层加密 loopback → 服务 → 完整树/下载地址回归，原版向量继续通过。原始响应只保存在 ignored 私有诊断目录，不提交分享 ID、文件名、下载 URL 或账号。
+
 ### 当前 generateMcloudSign
 
 见 `readable.js:3603-3633,3724-3830`：
@@ -100,7 +114,7 @@ RSA 实现用随机非零填充、BigInt 模幂，不属于本次 Rust 范围。
 
 **部署的 `md5` 不是标准 MD5！** 每一轮额外执行 `b=b+aa|0`，稀疏 words 缺项使该轮 f=NaN、位运算变0，最终按32位字大端 hex 输出。原函数 md5("")=`3cc0c603fb18b78e3cc0c6024cf31a79`，不是 RFC 1321 的值。本模块逐轮保留此行为，不能换成 md-5 crate。分享 API buildHeaders 并未发送 mcloud-sign；签名只用于登录相关 API，不必给分享请求增添它。
 
-## 5. 分享验证、分页与目录
+## 5. 冻结 JS：分享验证、分页与目录（非当前 Rust）
 
 分享元数据/目录 POST：
 
@@ -137,7 +151,7 @@ RSA 实现用随机非零填充、BigInt 模幂，不属于本次 Rust 范围。
 
 见 `MobileCloudParser.js:459-802`、`readable.js:14831-15023`。
 
-## 6. 文件路径、sid、下载302与缓存
+## 6. 冻结 JS：文件路径、sid、下载302与缓存
 
 下载 POST：`https://share-kd-njs.yun.139.com/yun-share/richlifeApp/devapp/IOutLink/dlFromOutLinkV3`
 
@@ -155,7 +169,7 @@ RSA 实现用随机非零填充、BigInt 模幂，不属于本次 Rust 范围。
 
 见 `MobileCloudParser.js:362-458,563-581`、`handleMainRequest.js:36-73`、`readable.js:14697-14830,3831-3861,22045-22090`。
 
-## 7. 完整行为矩阵、差分范围与风险
+## 7. 最初研究的行为矩阵、差分范围与风险（历史）
 
 | 类别 | 当前行为 | 此次 Rust / 差分 |
 |---|---|---|
@@ -173,6 +187,6 @@ RSA 实现用随机非零填充、BigInt 模幂，不属于本次 Rust 范围。
 
 已执行 Node VM：共 **4768** 向量；向量JSON SHA-256=`4157898e6ed4c45a71a99a8fba83546f4c2dfc9c73cec85d38f87736fff9e6d2`。测试不是把手写期望放进JSON，而是每次即时调用原方法，再对每个向量比较 Rust 结果及错误状态。签名固定 timestamp=`2026-05-14 12:34:56`、随机byte序列 i*17；nonce由原方法生成。
 
-新增文件未注册到 providers/mod.rs，不修改Cargo.toml或共享文件；差分测试通过 path 直接包含模块。Cargo依赖添加、实际运行Rust差分、联网对比、模块路由整合与提交由主agent负责。**在实际 cargo test 通过前，不能将“Node向量生成成功”宣称为“Rust差分通过”。**
+最初子任务曾用 path seam 单独核对纯函数；当前模块已注册、客户端/service/授权/路由已接入，不再以“未导出/仅静态梳理”描述整个项目。上表“此次 Rust”列是最初研究阶段的范围，不是当前功能清单；冻结 4768 向量与原 hash 仍保留，后续纠错单独声明差异。
 
-遗漏/风险：没有登录、目录、下载的网络验证；AES/RSA仅静态协议分析；URL识别不是安全域名校验，不能据此任意访问解析出的host；null与任意JS对象原型/getter不在JSON模型里；签名入参需保持原JSON.stringify输出，浮点格式与孤立surrogate可能不在Rust String域内；isFolder null应使用try_is_folder；文件ID/path、无分页、树完整性、循环目录、账号无关缓存、不同Authorization规范化、存储全局session覆盖以及源码日志泄密均需后续独立处理，不能本轮顺手改协议。
+当前未验收：完整 cursor/分享场景、真实扫码/续期全矩阵、CDN 播放、长期尾延迟/错误率与 CPU/RSS。移动单样本 >200 分页和两宽目录短期基准已完成，不再列作完全未验证，也不泛化为所有场景已完成。纯函数兼容提取不是安全域名校验；客户端继续限制固定供应商端点。JS 任意对象/getter、孤立 surrogate 与全部浮点格式不在 JSON/Rust String 等价证明域内。当前缓存按凭据/revision 隔离，生产完整性/循环/重名/未知大小已修复；历史风险不能写作尚未动工，合成回归也不替代真实供应商验收。

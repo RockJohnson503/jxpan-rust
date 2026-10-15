@@ -89,6 +89,7 @@ pub trait Transport {
 /// Dedicated, non-cookie-jar HTTP pool. Constructing it performs no requests.
 /// Redirects are manual; implicit fetch-style redirects may only stay on the
 /// same service host, so neither a POST body nor credentials can cross hosts.
+#[derive(Clone)]
 pub struct ReqwestTransport {
     client: reqwest::Client,
 }
@@ -100,6 +101,10 @@ impl ReqwestTransport {
             .build()
             .map_err(|_| AuthError::Transport)?;
         Ok(Self { client })
+    }
+    /// Caller must disable redirects/cookie jars/default credentials on this pool.
+    pub fn with_client(client: reqwest::Client) -> Self {
+        Self { client }
     }
 }
 impl Transport for ReqwestTransport {

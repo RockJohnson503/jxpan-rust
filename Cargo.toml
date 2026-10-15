@@ -6,8 +6,8 @@ rust-version = "1.93"
 publish = false
 
 [dependencies]
-axum = { version = "0.8", default-features = false, features = ["http1", "tokio", "json"] }
-tokio = { version = "1", default-features = false, features = ["macros", "net", "rt", "signal", "sync"] }
+axum = { version = "0.8", default-features = false, features = ["http1", "tokio", "json", "multipart"] }
+tokio = { version = "1", default-features = false, features = ["macros", "net", "rt", "signal", "sync", "time"] }
 rusqlite = { version = "0.37", features = ["bundled"] }
 base64 = "0.22"
 hmac = "0.12"

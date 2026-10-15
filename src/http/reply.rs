@@ -1,3 +1,4 @@
+use crate::compat::truthy;
 use axum::{
     body::{Body, Bytes},
     http::{StatusCode, header},
@@ -17,6 +18,7 @@ pub struct Reply {
     pub status: StatusCode,
     pub body: ReplyBody,
     pub cacheable: bool,
+    pub request_success: bool,
 }
 
 impl Reply {
@@ -26,10 +28,13 @@ impl Reply {
     }
 
     pub fn fast_error(mut value: Value) -> Self {
-        let status = if value["code"] == 400 {
-            StatusCode::BAD_REQUEST
-        } else {
-            StatusCode::BAD_GATEWAY
+        let status = match value["code"].as_u64() {
+            Some(400) => StatusCode::BAD_REQUEST,
+            Some(401) => StatusCode::UNAUTHORIZED,
+            Some(403) => StatusCode::FORBIDDEN,
+            Some(404) => StatusCode::NOT_FOUND,
+            Some(413) => StatusCode::PAYLOAD_TOO_LARGE,
+            _ => StatusCode::BAD_GATEWAY,
         };
         value["code"] = json!(status.as_u16());
         Self::with_status(status, value, false)
@@ -39,6 +44,7 @@ impl Reply {
         let bytes = serde_json::to_vec(&value).expect("JSON Value is serializable");
         let retained = bytes.capacity();
         Self {
+            request_success: truthy(&value["success"]),
             status,
             body: ReplyBody::Json {
                 bytes: bytes.into(),
@@ -67,6 +73,7 @@ impl Reply {
             return Self::error(StatusCode::BAD_GATEWAY, "上游下载地址无效");
         }
         Self {
+            request_success: true,
             status: StatusCode::FOUND,
             body: ReplyBody::Redirect(url),
             cacheable: true,
@@ -126,7 +133,15 @@ mod tests {
 
     #[test]
     fn fast_failures_keep_http_and_json_codes_in_sync_and_are_not_cached() {
-        for (code, expected) in [(400, 400), (502, 502), (500, 502)] {
+        for (code, expected) in [
+            (400, 400),
+            (401, 401),
+            (403, 403),
+            (404, 404),
+            (413, 413),
+            (502, 502),
+            (500, 502),
+        ] {
             let reply = Reply::fast_error(
                 json!({"code":code,"msg":"synthetic failure","success":false,"data":null}),
             );
