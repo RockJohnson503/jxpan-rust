@@ -1,12 +1,6 @@
 use super::{AppState, params::Params, reply::Reply};
 use crate::auth::Provider;
-use crate::providers::{
-    cloud189,
-    cloud189_client::Cloud189Client,
-    cloud189_service, mcloud,
-    mcloud_client::MobileCloudClient,
-    mcloud_service::{self, ServiceConfig},
-};
+use crate::providers::{cloud189, mcloud};
 use axum::http::StatusCode;
 use serde_json::{Value, json};
 use std::{
@@ -16,6 +10,12 @@ use std::{
         atomic::{AtomicBool, Ordering},
     },
 };
+
+mod provider_cloud;
+mod provider_mobile;
+
+use provider_cloud::cloud189;
+use provider_mobile::mobile;
 
 enum ParseOutcome {
     Direct(Reply),
@@ -186,215 +186,6 @@ async fn run_inner(
         json!({"code":501,"msg":"该网盘尚未迁移","success":false,"data":null}),
         None,
     )
-}
-async fn mobile(
-    state: AppState,
-    params: Params,
-    revision: u64,
-    credentials: Arc<Value>,
-    rejected: Arc<AtomicBool>,
-) -> ParseOutcome {
-    let config = &credentials["mcloud"];
-    let authorization = config["authorization"]
-        .as_str()
-        .filter(|s| !s.is_empty())
-        .unwrap_or(params.get("auth"))
-        .to_owned();
-    let configured = !authorization.is_empty();
-    let enabled = config["enabled"] != false && config["enabled"] != "false";
-    let client = MobileCloudClient::new(state.http.clone(), authorization)
-        .with_limit(state.parse_settings.upstream())
-        .with_auth_rejection(rejected);
-    if params.get("type") == "down" && !params.file_id().is_empty() {
-        if !enabled {
-            return ParseOutcome::Direct(Reply::error(
-                StatusCode::SERVICE_UNAVAILABLE,
-                "移动云盘解析已禁用",
-            ));
-        }
-        if !configured {
-            return ParseOutcome::Direct(Reply::error(
-                StatusCode::BAD_GATEWAY,
-                "移动云盘凭据未配置",
-            ));
-        }
-        let sid = if params.get("sid").is_empty() {
-            mcloud::extract_share_info(params.get("url")).unwrap_or_default()
-        } else {
-            params.get("sid").to_owned()
-        };
-        if sid.is_empty() {
-            return ParseOutcome::Direct(Reply::error(
-                StatusCode::BAD_REQUEST,
-                "缺少或无效的分享 ID",
-            ));
-        }
-        if directory(&state, &params, revision, &sid) {
-            return ParseOutcome::Direct(Reply::error(StatusCode::BAD_REQUEST, "目录无法下载"));
-        }
-        return ParseOutcome::Direct(match client.download_url(&sid, params.file_id()).await {
-            Ok(Some(url)) => Reply::redirect(url),
-            _ => Reply::error(StatusCode::BAD_GATEWAY, "移动云盘获取下载链接失败"),
-        });
-    }
-    let (value, index) = if params.get("action") == "parse_mcloud_subfolder" {
-        if !enabled || !configured {
-            (
-                json!({"code":if enabled {401} else {503},"msg":"移动云盘未配置或已禁用","success":false,"data":null}),
-                None,
-            )
-        } else if !params.get("file_id").is_empty() || !params.file_id().is_empty() {
-            // The legacy page sends file_id; resolve a single/root or nested target
-            // through the existing bounded file lookup, not an empty fid-chain.
-            mcloud_service::parse_indexed(
-                &client,
-                ServiceConfig {
-                    enabled,
-                    authorization_configured: configured,
-                },
-                params.get("url"),
-                params.get("pwd"),
-                &params.folders(),
-                if params.get("file_id").is_empty() {
-                    params.file_id()
-                } else {
-                    params.get("file_id")
-                },
-            )
-            .await
-        } else if let Some(link) = mcloud::extract_share_info(params.get("url")) {
-            (
-                mcloud_service::parse_with_fid_chain(
-                    &client,
-                    &link,
-                    params.get("pwd"),
-                    &params.folders(),
-                    params.file_id(),
-                )
-                .await,
-                None,
-            )
-        } else {
-            (
-                json!({"code":400,"msg":"缺少或无效的分享链接参数","success":false,"data":null}),
-                None,
-            )
-        }
-    } else {
-        mcloud_service::parse_indexed(
-            &client,
-            ServiceConfig {
-                enabled,
-                authorization_configured: configured,
-            },
-            params.get("url"),
-            params.get("pwd"),
-            &params.folders(),
-            params.file_id(),
-        )
-        .await
-    };
-    ParseOutcome::Parsed(value, index)
-}
-async fn cloud189(
-    state: AppState,
-    params: Params,
-    revision: u64,
-    account: Arc<Value>,
-    rejected: Arc<AtomicBool>,
-) -> ParseOutcome {
-    let mut credentials = account["cloud189"].clone();
-    let token = if params.get("c189_token").is_empty() {
-        params.get("p189_token")
-    } else {
-        params.get("c189_token")
-    };
-    if !token.is_empty() {
-        credentials["open_access_token"] = token.into();
-    }
-    let configured = credentials["open_access_token"]
-        .as_str()
-        .is_some_and(|s| !s.is_empty())
-        || (credentials["session_key"]
-            .as_str()
-            .is_some_and(|s| !s.is_empty())
-            && credentials["session_secret"]
-                .as_str()
-                .is_some_and(|s| !s.is_empty()));
-    if !configured {
-        let value = json!({"code":401,"msg":"天翼云盘凭据未配置","success":false,"data":null});
-        return if params.get("type") == "down" {
-            ParseOutcome::Direct(Reply::error(StatusCode::BAD_GATEWAY, "天翼云盘凭据未配置"))
-        } else {
-            ParseOutcome::Parsed(value, None)
-        };
-    }
-    let client = Cloud189Client::new(state.http.clone(), credentials)
-        .with_limit(state.parse_settings.upstream())
-        .with_auth_rejection(rejected);
-    if params.get("type") == "down" && !params.file_id().is_empty() {
-        if directory(&state, &params, revision, params.get("sid")) {
-            return ParseOutcome::Direct(Reply::error(StatusCode::BAD_REQUEST, "目录无法下载"));
-        }
-        let url = match cloud189_service::fast_download(
-            client,
-            params.get("url"),
-            params.get("pwd"),
-            params.file_id(),
-            params.get("sid"),
-        )
-        .await
-        {
-            Ok(url) => url,
-            Err(value) => return ParseOutcome::Direct(Reply::fast_error(value)),
-        };
-        // Return the supplier URL directly. The client follows any CDN hop;
-        // this server never issues Range GET or receives file/video bytes.
-        return ParseOutcome::Direct(Reply::redirect(url));
-    }
-    let (value, index) = match params.get("action") {
-        "parse_cloud189_file" => (
-            cloud189_service::parse_file(
-                client,
-                params.get("share_id"),
-                params.get("file_id"),
-                params.get("file_name"),
-                params.get("file_size"),
-                params.get("pwd"),
-                params.get("share_code"),
-            )
-            .await,
-            None,
-        ),
-        "parse_cloud189_folder_item" => (
-            cloud189_service::browse_folder_item(
-                client,
-                params.get("share_id"),
-                params.get("folder_id"),
-                params.get("target_file_id"),
-                params.get("pwd"),
-                if params.get("share_mode").is_empty() {
-                    "1"
-                } else {
-                    params.get("share_mode")
-                },
-                params.get("share_code"),
-            )
-            .await,
-            None,
-        ),
-        _ => {
-            cloud189_service::parse_indexed(
-                client,
-                params.get("url"),
-                params.get("pwd"),
-                &params.folders(),
-                params.file_id(),
-            )
-            .await
-        }
-    };
-    ParseOutcome::Parsed(value, index)
 }
 fn directory(state: &AppState, params: &Params, revision: u64, sid: &str) -> bool {
     state

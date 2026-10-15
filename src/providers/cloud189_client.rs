@@ -16,6 +16,14 @@ use std::{
 };
 use url::Url;
 
+#[path = "cloud189_client/cookies.rs"]
+mod cookies;
+#[path = "cloud189_client/json.rs"]
+mod json;
+
+use cookies::extract_cookies;
+pub(crate) use json::parse_json_safe;
+
 const APP: &str = "https://api.cloud.189.cn";
 const WEB: &str = "https://cloud.189.cn/api";
 const ACCEPT: &str = "application/json;charset=UTF-8";
@@ -998,111 +1006,6 @@ fn normalize_download(data: &Value) -> Option<String> {
     Some(url)
 }
 
-// Same lexical scanner as jxpanParseJsonSafe: quote integer tokens with >=16
-// digits before serde_json sees them, including negative IDs and sizes.
-pub(crate) fn parse_json_safe(text: &str) -> serde_json::Result<Value> {
-    let bytes = text.as_bytes();
-    let mut output = Vec::with_capacity(bytes.len());
-    let mut i = 0;
-    while i < bytes.len() {
-        if bytes[i] == b'"' {
-            output.push(bytes[i]);
-            i += 1;
-            while i < bytes.len() {
-                let byte = bytes[i];
-                output.push(byte);
-                i += 1;
-                if byte == b'\\' && i < bytes.len() {
-                    output.push(bytes[i]);
-                    i += 1;
-                } else if byte == b'"' {
-                    break;
-                }
-            }
-            continue;
-        }
-        let byte = bytes[i];
-        if (byte == b'-' || byte.is_ascii_digit())
-            && (i == 0 || !(bytes[i - 1].is_ascii_alphanumeric() || b"_\"".contains(&bytes[i - 1])))
-        {
-            let mut j = i + usize::from(byte == b'-');
-            while j < bytes.len() && bytes[j].is_ascii_digit() {
-                j += 1;
-            }
-            if j - i - usize::from(byte == b'-') >= 16 {
-                output.push(b'"');
-                output.extend_from_slice(&bytes[i..j]);
-                output.push(b'"');
-            } else {
-                output.extend_from_slice(&bytes[i..j]);
-            }
-            i = j;
-            continue;
-        }
-        output.push(byte);
-        i += 1;
-    }
-    serde_json::from_slice(&output)
-}
-fn deletion_cookie(cookie: &str, now: SystemTime) -> bool {
-    let mut max_age = None;
-    let mut expires = None;
-    for attribute in cookie.split(';').skip(1) {
-        let Some((name, value)) = attribute.trim().split_once('=') else {
-            continue;
-        };
-        if name.trim().eq_ignore_ascii_case("max-age") {
-            if let Ok(age) = value.trim().parse::<i64>() {
-                max_age = Some(age);
-            }
-        } else if name.trim().eq_ignore_ascii_case("expires")
-            && let Ok(date) = httpdate::parse_http_date(value.trim())
-        {
-            expires = Some(date);
-        }
-    }
-    max_age
-        .map(|age| age <= 0)
-        .unwrap_or_else(|| expires.is_some_and(|date| date <= now))
-}
-fn extract_cookies(raw: &[String], now: SystemTime) -> Vec<String> {
-    let extract = |cookie: &str| -> Option<String> {
-        if deletion_cookie(cookie, now) {
-            return None;
-        }
-        let pair = cookie.split(';').next()?.trim();
-        let (name, value) = pair.split_once('=')?;
-        if name.is_empty() || value.is_empty() {
-            None
-        } else {
-            Some(pair.to_owned())
-        }
-    };
-    // reqwest exposes individual Set-Cookie headers. If a server coalesces them,
-    // split only before another cookie-pair, never the comma inside Expires.
-    raw.iter()
-        .flat_map(|header| {
-            let mut start = 0;
-            let mut fields = Vec::new();
-            for (index, _) in header.match_indices(',') {
-                let next = header[index + 1..].trim_start();
-                let name = next.split(['=', ';', ',']).next().unwrap_or("");
-                if !name.is_empty()
-                    && name
-                        .bytes()
-                        .all(|b| b.is_ascii_alphanumeric() || b"!#$%&'*+-.^_`|~".contains(&b))
-                    && next.as_bytes().get(name.len()) == Some(&b'=')
-                {
-                    fields.push(&header[start..index]);
-                    start = index + 1;
-                }
-            }
-            fields.push(&header[start..]);
-            fields
-        })
-        .filter_map(extract)
-        .collect()
-}
 /// Deployment's ordered cookie-name merge; values may contain '='.
 pub fn merge_cookies(existing: &str, incoming: &[String]) -> String {
     let mut cookies: Vec<(String, String)> = Vec::new();
